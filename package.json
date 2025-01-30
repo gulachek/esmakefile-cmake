@@ -1,0 +1,22 @@
+{
+  "name": "esmakefile-cmake",
+  "version": "0.1.0",
+  "description": "Integrate esmakefile with CMake",
+  "scripts": {
+    "test": "test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gulachek/esmakefile-cmake.git"
+  },
+  "keywords": [
+    "esmakefile",
+    "cmake"
+  ],
+  "author": "Nicholas Gulachek",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/gulachek/esmakefile-cmake/issues"
+  },
+  "homepage": "https://github.com/gulachek/esmakefile-cmake#readme"
+}
