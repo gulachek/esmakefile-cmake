@@ -1,33 +1,36 @@
 {
-  "name": "esmakefile-cmake",
-  "version": "0.1.0",
-  "description": "Integrate esmakefile with CMake",
-  "scripts": {
-    "test": "test"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/gulachek/esmakefile-cmake.git"
-  },
-  "keywords": [
-    "esmakefile",
-    "cmake"
-  ],
-  "author": "Nicholas Gulachek",
-  "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/gulachek/esmakefile-cmake/issues"
-  },
-  "homepage": "https://github.com/gulachek/esmakefile-cmake#readme",
-  "devDependencies": {
-    "@types/chai": "^5.0.1",
-    "@types/mocha": "^10.0.10",
-    "@types/node": "^22.12.0",
-    "chai": "^5.1.2",
-    "mocha": "^11.1.0",
-    "typescript": "^5.7.3"
-  },
-  "dependencies": {
-    "esmakefile": "^0.6.1"
-  }
+	"name": "esmakefile-cmake",
+	"version": "0.1.0",
+	"description": "Integrate esmakefile with CMake",
+	"type": "module",
+	"scripts": {
+		"build": "tsc",
+		"test": "mocha dist/spec"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/gulachek/esmakefile-cmake.git"
+	},
+	"keywords": [
+		"esmakefile",
+		"cmake"
+	],
+	"author": "Nicholas Gulachek",
+	"license": "ISC",
+	"bugs": {
+		"url": "https://github.com/gulachek/esmakefile-cmake/issues"
+	},
+	"homepage": "https://github.com/gulachek/esmakefile-cmake#readme",
+	"devDependencies": {
+		"@types/chai": "^5.0.1",
+		"@types/mocha": "^10.0.10",
+		"@types/node": "^22.12.0",
+		"chai": "^5.1.2",
+		"mocha": "^11.1.0",
+		"prettier": "^3.4.2",
+		"typescript": "^5.7.3"
+	},
+	"dependencies": {
+		"esmakefile": "^0.6.1"
+	}
 }
