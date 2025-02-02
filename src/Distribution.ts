@@ -97,21 +97,6 @@ interface IPackageImport extends ILinkable {
 	cmake?: ICmakePackageImport;
 }
 
-interface IDistribution {
-	name: string;
-	version: string;
-
-	// Translates to find_package or pkg_check_modules
-	// At dev time, only uses pkg-config
-	pkgRefs: IPackageImport[];
-
-	// Translates to add_executable
-	executables: IExecutable[];
-
-	// Translates to add_library
-	libraries: ILibrary[];
-}
-
 export class Distribution {
 	readonly make: Makefile;
 	readonly name: string;
@@ -159,7 +144,6 @@ export class Distribution {
 			objs.push(obj);
 
 			this.make.add(obj, [s], (args) => {
-				debugger;
 				return args.spawn('cc', [
 					'-c',
 					...includeFlags,
