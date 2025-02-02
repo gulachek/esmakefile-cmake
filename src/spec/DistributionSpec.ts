@@ -38,7 +38,8 @@ async function updateTarget(
 	expect(warnings.length).to.equal(0);
 }
 
-describe('Distribution', () => {
+describe('Distribution', function () {
+	this.timeout(10000); // 2 sec too short for these specs
 	let make: Makefile;
 
 	function writePath(src: PathLike, ...lines: string[]): Promise<void> {
