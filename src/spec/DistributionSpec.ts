@@ -135,4 +135,51 @@ describe('Distribution', () => {
 
 		await expectOutput(hello.path, '4');
 	});
+
+	it('compiles and links libraries', async () => {
+		await writePath('include/add.h', 'int add(int a, int b);');
+
+		await writePath(
+			'src/add.c',
+			'#include "add.h"',
+			'int add(int a, int b){ return a + b; }',
+		);
+
+		await writePath(
+			'src/main.c',
+			'#include "add.h"',
+			'#include <stdio.h>',
+			'int main(){ printf("%d", add(2,2)); return 0; }',
+		);
+
+		const d = new Distribution(make, {
+			name: 'test',
+			version: '1.2.3',
+		});
+
+		const add = d.addLibrary({
+			name: 'add',
+			src: ['src/add.c'],
+		});
+
+		const test = d.addExecutable({
+			name: 'test',
+			src: ['src/main.c'],
+			linkTo: [add],
+		});
+
+		await expectOutput(test.path, '4');
+	});
+
+	// TODO
+	// custom include dirs
+	// addLibrary
+	// header only library
+	// distribution
+	// installing distribution
+	// linking to library
+	// pkgConfig
+	// compile_commands.json
+	// custom compiler
+	// custom cflags
 });
