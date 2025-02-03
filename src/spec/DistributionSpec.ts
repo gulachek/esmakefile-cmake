@@ -85,7 +85,7 @@ describe('Distribution', function () {
 			src: ['src/hello.c'],
 		});
 
-		await expectOutput(hello.path, 'hello!');
+		await expectOutput(hello.binary, 'hello!');
 	});
 
 	it('can compile multiple source file exe', async () => {
@@ -111,7 +111,7 @@ describe('Distribution', function () {
 			src: ['src/main.c', 'src/hello.c'],
 		});
 
-		await expectOutput(hello.path, 'hello!');
+		await expectOutput(hello.binary, 'hello!');
 	});
 
 	it('includes the "include" dir by default', async () => {
@@ -134,7 +134,7 @@ describe('Distribution', function () {
 			src: ['src/main.c'],
 		});
 
-		await expectOutput(hello.path, '4');
+		await expectOutput(hello.binary, '4');
 	});
 
 	it('compiles and links libraries', async () => {
@@ -169,7 +169,7 @@ describe('Distribution', function () {
 			linkTo: [add],
 		});
 
-		await expectOutput(test.path, '4');
+		await expectOutput(test.binary, '4');
 	});
 
 	// TODO
