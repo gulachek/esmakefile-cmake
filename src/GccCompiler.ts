@@ -69,7 +69,6 @@ export class GccCompiler implements ICompiler {
 			objs.push(obj);
 
 			this.make.add(obj, [s], (args) => {
-				debugger;
 				return args.spawn('cc', [
 					'-c',
 					...includeFlags,
