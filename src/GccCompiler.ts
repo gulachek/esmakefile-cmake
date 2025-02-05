@@ -49,8 +49,8 @@ export class GccCompiler implements ICompiler {
 			return args.spawn('cc', [
 				'-o',
 				args.abs(e.binary),
-				...linkFlags,
 				...objsAbs,
+				...linkFlags,
 			]);
 		});
 
