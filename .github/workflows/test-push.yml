@@ -30,7 +30,6 @@ jobs:
       - name: Test Building with MSVC
         shell: cmd
         run: |
-          set -e
           "%ProgramFiles(x86)%\\Microsoft Visual Studio\\Installer\\vswhere.exe" -property resolvedInstallationPath > vsdir.txt
           set /p VS=<vsdir.txt
           call "%VS%\\VC\\Auxiliary\\Build\\vcvars64.bat"
