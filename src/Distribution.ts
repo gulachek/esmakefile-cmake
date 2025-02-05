@@ -1,10 +1,12 @@
 import { Makefile, PathLike, Path, IBuildPath } from 'esmakefile';
 import { ICompiler } from './Compiler.js';
 import { GccCompiler } from './GccCompiler.js';
+import { MsvcCompiler } from './MsvcCompiler.js';
 import { Executable, IExecutable } from './Executable.js';
 import { ILibrary, Library } from './Library.js';
 import { mkdir, copyFile, writeFile } from 'node:fs/promises';
 import { chdir, cwd } from 'node:process';
+import { platform } from 'node:os';
 
 export interface IDistributionOpts {
 	name: string;
@@ -39,7 +41,12 @@ export class Distribution {
 		this.version = opts.version;
 		this.outDir = Path.build(this.name);
 		this.dist = Path.build(`${this.name}-${this.version}.tgz`);
-		this._compiler = new GccCompiler(make);
+
+		if (platform() === 'win32') {
+			this._compiler = new MsvcCompiler(make);
+		} else {
+			this._compiler = new GccCompiler(make);
+		}
 
 		this._addDist();
 	}

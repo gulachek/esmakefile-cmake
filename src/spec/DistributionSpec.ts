@@ -90,7 +90,7 @@ async function run(
 }
 
 describe('Distribution', function () {
-	this.timeout(10000); // 2 sec too short for these specs
+	this.timeout(60000); // 2 sec too short for these specs. MS cmake config takes ~20s
 	let make: Makefile;
 
 	function writePath(src: PathLike, ...lines: string[]): Promise<void> {
@@ -118,8 +118,9 @@ describe('Distribution', function () {
 
 		await mkdir(stageDir);
 		await run('cmake', ['-B', stageDir, '-S', join(testDir, 'test-1.2.3')]);
-		await run('cmake', ['--build', stageDir]);
-		await run('cmake', ['--install', stageDir, '--prefix', testDir]);
+		// Specify config b.c. default for MS is Debug for --build and Release for --install
+		await run('cmake', ['--build', stageDir, '--config', 'Release']);
+		await run('cmake', ['--install', stageDir, '--prefix', testDir, '--config', 'Release']);
 	}
 
 	beforeEach(async () => {
@@ -129,7 +130,7 @@ describe('Distribution', function () {
 		});
 
 		await mkdir(includeDir, { recursive: true });
-		await mkdir(srcDir);
+		await mkdir(srcDir, { recursive: true });
 	});
 
 	afterEach(async () => {
