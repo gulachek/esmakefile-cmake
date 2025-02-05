@@ -3,8 +3,11 @@ name: Push Tests
 on: [push]
 
 jobs:
-  test-apple-clang:
-    runs-on: macos-latest
+  npm-test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [macos-latest, windows-latest]
     steps:
       - uses: actions/checkout@v4
       - name: Use Node.js
