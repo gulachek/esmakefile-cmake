@@ -241,6 +241,62 @@ describe('Distribution', function () {
 		await expectOutput(test.binary, '4');
 	});
 
+	describe('static vs dynamic', () => {
+		it('is static by default', async () => {
+			await writePath(
+				'include/image_name.h',
+				'int image_name(char *dst, int sz);',
+			);
+
+			await writePath(
+				'src/image_name.c',
+				'#include "image_name.h"',
+				'#include <dlfcn.h>', // TODO: win32
+				'#include <string.h>',
+				'int image_name(char *dst, int sz){',
+				'	Dl_info info;',
+				'	if (dladdr(image_name, &info)){',
+				'		strlcpy(dst, info.dli_fname, sz);',
+				'		return 1;',
+				'	} else {',
+				'		return 0;',
+				'	}',
+				'}',
+			);
+
+			await writePath(
+				'src/main.c',
+				'#include "image_name.h"',
+				'#include <stdio.h>',
+				'int main(){',
+				'	char buf[1024];',
+				'	if (!image_name(buf, sizeof(buf))) return 1;',
+				'	printf("%s", buf);',
+				'	return 0;',
+				'}',
+			);
+
+			const d = new Distribution(make, {
+				name: 'test',
+				version: '1.2.3',
+			});
+
+			const img = d.addLibrary({
+				name: 'image_name',
+				src: ['src/image_name.c'],
+			});
+
+			const test = d.addExecutable({
+				name: 'test',
+				src: ['src/main.c'],
+				linkTo: [img],
+			});
+
+			// static will link into executable image
+			await expectOutput(test.binary, make.abs(test.binary));
+		});
+	});
+
 	it('installs an executable', async () => {
 		await writePath(
 			'src/main.c',
