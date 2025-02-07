@@ -250,9 +250,18 @@ describe('Distribution', function () {
 
 			await writePath(
 				'src/image_name.c',
-				'#include "image_name.h"',
-				'#include <dlfcn.h>', // TODO: win32
 				'#include <string.h>',
+				'#include "image_name.h"',
+				'#ifdef _WIN32',
+				'#include <windows.h>',
+				'int image_name(char *dst, int sz){',
+				' HANDLE module;',
+				' GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, image_name, &module);',
+				' GetModuleFileNameA(module, dst, sz);',
+				' return 1;',
+				'}',
+				'#else',
+				'#include <dlfcn.h>',
 				'int image_name(char *dst, int sz){',
 				'	Dl_info info;',
 				'	if (dladdr(image_name, &info)){',
@@ -262,6 +271,7 @@ describe('Distribution', function () {
 				'		return 0;',
 				'	}',
 				'}',
+				'#endif',
 			);
 
 			await writePath(
