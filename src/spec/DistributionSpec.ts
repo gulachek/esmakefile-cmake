@@ -250,6 +250,9 @@ describe('Distribution', function () {
 
 			await writePath(
 				'src/image_name.c',
+				'#ifdef __linux__',
+				'#define _GNU_SOURCE', // needed for Dl_info
+				'#endif',
 				'#include <string.h>',
 				'#include "image_name.h"',
 				'#ifdef _WIN32',
