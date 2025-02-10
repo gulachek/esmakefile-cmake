@@ -84,6 +84,7 @@ export class GccCompiler implements ICompiler {
 			this.make.add(obj, [s], (args) => {
 				return args.spawn(this.cc, [
 					'-c',
+					'-fPIC',
 					...includeFlags,
 					'-o',
 					args.abs(obj),
