@@ -9,6 +9,7 @@ export class GccCompiler implements ICompiler {
 	private _dylibExt: string;
 	private cc: string;
 	private ar: string;
+	private requiresRpath: boolean = false;
 
 	constructor(make: Makefile) {
 		this.make = make;
@@ -19,6 +20,7 @@ export class GccCompiler implements ICompiler {
 			this._dylibExt = '.dylib';
 		} else {
 			this._dylibExt = '.so';
+			this.requiresRpath = true;
 		}
 	}
 
@@ -55,6 +57,10 @@ export class GccCompiler implements ICompiler {
 				linkFlags.push(`-l${l.name}`);
 				libDeps.push(l.binary);
 			}
+		}
+
+		if (this.requiresRpath) {
+			linkFlags.push(`-Wl,-rpath=$ORIGIN`);
 		}
 
 		this.make.add(e.binary, [...libDeps, ...objs], (args) => {
