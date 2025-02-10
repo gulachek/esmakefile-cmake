@@ -1,12 +1,25 @@
+import { platform } from 'node:os';
 import { ICompiler } from './Compiler.js';
 import { Executable, IExecutable } from './Executable.js';
-import { ILibrary, Library } from './Library.js';
+import { ILibrary, Library, ResolvedLibraryType } from './Library.js';
 import { Makefile, Path, IBuildPath } from 'esmakefile';
 
 export class GccCompiler implements ICompiler {
 	private make: Makefile;
+	private _dylibExt: string;
+	private cc: string;
+	private ar: string;
+
 	constructor(make: Makefile) {
 		this.make = make;
+		this.cc = 'cc';
+		this.ar = 'ar';
+
+		if (platform() === 'darwin') {
+			this._dylibExt = '.dylib';
+		} else {
+			this._dylibExt = '.so';
+		}
 	}
 
 	public addExecutable(exe: IExecutable): Executable {
@@ -21,7 +34,7 @@ export class GccCompiler implements ICompiler {
 			objs.push(obj);
 
 			this.make.add(obj, [s], (args) => {
-				return args.spawn('cc', [
+				return args.spawn(this.cc, [
 					'-c',
 					...includeFlags,
 					'-o',
@@ -46,7 +59,7 @@ export class GccCompiler implements ICompiler {
 
 		this.make.add(e.binary, [...libDeps, ...objs], (args) => {
 			const objsAbs = args.absAll(...objs);
-			return args.spawn('cc', [
+			return args.spawn(this.cc, [
 				'-o',
 				args.abs(e.binary),
 				...objsAbs,
@@ -69,7 +82,7 @@ export class GccCompiler implements ICompiler {
 			objs.push(obj);
 
 			this.make.add(obj, [s], (args) => {
-				return args.spawn('cc', [
+				return args.spawn(this.cc, [
 					'-c',
 					...includeFlags,
 					'-o',
@@ -79,16 +92,29 @@ export class GccCompiler implements ICompiler {
 			});
 		}
 
-		// TODO dynamic libraries
-		const devOutName = `lib${lib.name}.a`;
-		const path = lib.outDir.join(devOutName);
-		const l = new Library(lib.name, path);
+		if (lib.type === ResolvedLibraryType.static) {
+			const path = lib.outDir.join(`lib${lib.name}.a`);
+			const l = new Library(lib.name, path);
 
-		this.make.add(path, objs, (args) => {
-			const objsAbs = args.absAll(...objs);
-			return args.spawn('ar', ['rcs', args.abs(path), ...objsAbs]);
-		});
+			this.make.add(path, objs, (args) => {
+				const objsAbs = args.absAll(...objs);
+				return args.spawn(this.ar, ['rcs', args.abs(path), ...objsAbs]);
+			});
+			return l;
+		} else {
+			const path = lib.outDir.join(`lib${lib.name}${this._dylibExt}`);
+			const l = new Library(lib.name, path);
 
-		return l;
+			this.make.add(path, objs, (args) => {
+				const objsAbs = args.absAll(...objs);
+				return args.spawn(this.cc, [
+					'-shared',
+					'-o',
+					args.abs(path),
+					...objsAbs,
+				]);
+			});
+			return l;
+		}
 	}
 }

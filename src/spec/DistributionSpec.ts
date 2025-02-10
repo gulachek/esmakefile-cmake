@@ -1,5 +1,5 @@
 import { expect } from 'chai';
-import { Distribution, Executable, LibraryType } from '../index.js';
+import { Distribution, LibraryType } from '../index.js';
 import {
 	Makefile,
 	PathLike,
@@ -357,6 +357,27 @@ describe('Distribution', function () {
 			});
 
 			await expectOutput(test.binary, make.abs(test.binary));
+		});
+
+		it('is dynamic when explicitly set to dynamic', async () => {
+			const d = new Distribution(make, {
+				name: 'test',
+				version: '1.2.3',
+			});
+
+			const img = d.addLibrary({
+				name: 'image_name',
+				src: ['src/image_name.c'],
+				type: LibraryType.dynamic,
+			});
+
+			const test = d.addExecutable({
+				name: 'test',
+				src: ['src/main.c'],
+				linkTo: [img],
+			});
+
+			await expectOutput(test.binary, make.abs(img.binary));
 		});
 	});
 

@@ -3,7 +3,7 @@ import { ICompiler } from './Compiler.js';
 import { GccCompiler } from './GccCompiler.js';
 import { MsvcCompiler } from './MsvcCompiler.js';
 import { Executable, IExecutable } from './Executable.js';
-import { ILibrary, Library } from './Library.js';
+import { ILibrary, Library, ResolvedLibraryType } from './Library.js';
 import { mkdir, copyFile, writeFile } from 'node:fs/promises';
 import { chdir, cwd } from 'node:process';
 import { platform } from 'node:os';
@@ -41,6 +41,7 @@ export class Distribution {
 	private _executables: IExecutable[] = [];
 	private _libraries: ILibrary[] = [];
 	private _compiler: ICompiler;
+	private _defaultLibraryType: ResolvedLibraryType = ResolvedLibraryType.static;
 
 	constructor(make: Makefile, opts: IDistributionOpts) {
 		this.make = make;
@@ -81,11 +82,25 @@ export class Distribution {
 			src: opts.src.map((s) => Path.src(s)),
 			includeDirs: [Path.src('include')],
 			linkTo: [],
+			type: this._resolveLibraryType(opts.type || LibraryType.default),
 		};
 
 		this._libraries.push(lib);
 
 		return this._compiler.addLibrary(lib);
+	}
+
+	private _resolveLibraryType(type: LibraryType): ResolvedLibraryType {
+		switch (type) {
+			case LibraryType.static:
+				return ResolvedLibraryType.static;
+			case LibraryType.dynamic:
+				return ResolvedLibraryType.dynamic;
+			case LibraryType.default:
+				return this._defaultLibraryType;
+			default:
+				throw new Error(`Unexpected LibraryType '${type}'`);
+		}
 	}
 
 	private _addDist(): void {
