@@ -1,5 +1,6 @@
 export {
 	Distribution,
+	LibraryType,
 	IAddLibraryOpts,
 	IAddExecutableOpts,
 } from './Distribution.js';

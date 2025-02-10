@@ -1,5 +1,5 @@
 import { expect } from 'chai';
-import { Distribution } from '../index.js';
+import { Distribution, Executable, LibraryType } from '../index.js';
 import {
 	Makefile,
 	PathLike,
@@ -120,7 +120,14 @@ describe('Distribution', function () {
 		await run('cmake', ['-B', stageDir, '-S', join(testDir, 'test-1.2.3')]);
 		// Specify config b.c. default for MS is Debug for --build and Release for --install
 		await run('cmake', ['--build', stageDir, '--config', 'Release']);
-		await run('cmake', ['--install', stageDir, '--prefix', testDir, '--config', 'Release']);
+		await run('cmake', [
+			'--install',
+			stageDir,
+			'--prefix',
+			testDir,
+			'--config',
+			'Release',
+		]);
 	}
 
 	beforeEach(async () => {
@@ -242,7 +249,7 @@ describe('Distribution', function () {
 	});
 
 	describe('static vs dynamic', () => {
-		it('is static by default', async () => {
+		beforeEach(async () => {
 			await writePath(
 				'include/image_name.h',
 				'int image_name(char *dst, int sz);',
@@ -288,7 +295,9 @@ describe('Distribution', function () {
 				'	return 0;',
 				'}',
 			);
+		});
 
+		it('is static by default', async () => {
 			const d = new Distribution(make, {
 				name: 'test',
 				version: '1.2.3',
@@ -305,7 +314,48 @@ describe('Distribution', function () {
 				linkTo: [img],
 			});
 
-			// static will link into executable image
+			await expectOutput(test.binary, make.abs(test.binary));
+		});
+
+		it('is static when explicitly set to default type', async () => {
+			const d = new Distribution(make, {
+				name: 'test',
+				version: '1.2.3',
+			});
+
+			const img = d.addLibrary({
+				name: 'image_name',
+				src: ['src/image_name.c'],
+				type: LibraryType.default,
+			});
+
+			const test = d.addExecutable({
+				name: 'test',
+				src: ['src/main.c'],
+				linkTo: [img],
+			});
+
+			await expectOutput(test.binary, make.abs(test.binary));
+		});
+
+		it('is static when explicitly set to static', async () => {
+			const d = new Distribution(make, {
+				name: 'test',
+				version: '1.2.3',
+			});
+
+			const img = d.addLibrary({
+				name: 'image_name',
+				src: ['src/image_name.c'],
+				type: LibraryType.static,
+			});
+
+			const test = d.addExecutable({
+				name: 'test',
+				src: ['src/main.c'],
+				linkTo: [img],
+			});
+
 			await expectOutput(test.binary, make.abs(test.binary));
 		});
 	});

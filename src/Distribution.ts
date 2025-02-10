@@ -19,9 +19,16 @@ export interface IAddExecutableOpts {
 	linkTo?: Library[];
 }
 
+export enum LibraryType {
+	default = 'default',
+	static = 'static',
+	dynamic = 'dynamic',
+}
+
 export interface IAddLibraryOpts {
 	name: string;
 	src: PathLike[];
+	type?: LibraryType;
 }
 
 export class Distribution {
