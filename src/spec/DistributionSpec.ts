@@ -252,7 +252,12 @@ describe('Distribution', function () {
 		beforeEach(async () => {
 			await writePath(
 				'include/image_name.h',
-				'int image_name(char *dst, int sz);',
+				'#ifdef _WIN32',
+				'#define EXPORT __declspec(dllexport)',
+				'#else',
+				'#define EXPORT',
+				'#endif',
+				'EXPORT int image_name(char *dst, int sz);',
 			);
 
 			await writePath(
@@ -265,8 +270,8 @@ describe('Distribution', function () {
 				'#ifdef _WIN32',
 				'#include <windows.h>',
 				'int image_name(char *dst, int sz){',
-				' HANDLE module;',
-				' GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, image_name, &module);',
+				' HMODULE module;',
+				' GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, (LPCSTR)image_name, &module);',
 				' GetModuleFileNameA(module, dst, sz);',
 				' return 1;',
 				'}',

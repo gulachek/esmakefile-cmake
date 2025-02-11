@@ -1,6 +1,6 @@
 import { ICompiler } from './Compiler.js';
 import { Executable, IExecutable } from './Executable.js';
-import { ILibrary, Library } from './Library.js';
+import { ILibrary, Library, ResolvedLibraryType } from './Library.js';
 import { Makefile, Path, IBuildPath } from 'esmakefile';
 
 export class MsvcCompiler implements ICompiler {
@@ -42,11 +42,10 @@ export class MsvcCompiler implements ICompiler {
 		const linkFlags: string[] = [];
 		const libDeps = [];
 		if (exe.linkTo.length > 0) {
-			linkFlags.push(`/L${this.make.abs(exe.outDir)}`);
 			for (const l of exe.linkTo) {
-				// TODO handle dynamic & import
-				linkFlags.push(this.make.abs(l.binary));
-				libDeps.push(l.binary);
+				const libFile = l.importLibrary || l.binary; // only dll will have importLibrary
+				linkFlags.push(this.make.abs(libFile));
+				libDeps.push(libFile);
 			}
 		}
 
@@ -86,15 +85,26 @@ export class MsvcCompiler implements ICompiler {
 			});
 		}
 
-		// TODO dynamic libraries
-		const path = lib.outDir.join(lib.name + '.lib');
-		const l = new Library(lib.name, path);
+		if (lib.type === ResolvedLibraryType.static) {
+			const path = lib.outDir.join(lib.name + '.lib');
+			const l = new Library(lib.name, path);
 
-		this.make.add(path, objs, (args) => {
-			const objsAbs = args.absAll(...objs);
-			return args.spawn(this.lib, ['/nologo', `/OUT:${args.abs(path)}`, ...objsAbs]);
-		});
+			this.make.add(path, objs, (args) => {
+				const objsAbs = args.absAll(...objs);
+				return args.spawn(this.lib, ['/nologo', `/OUT:${args.abs(path)}`, ...objsAbs]);
+			});
+			return l;
+		} else {
+			const path = lib.outDir.join(lib.name + '.dll');
+			const importPath = lib.outDir.join(lib.name + '.lib');
+			const l = new Library(lib.name, path);
+			l.importLibrary = importPath;
 
-		return l;
+			this.make.add([path, importPath], objs, (args) => {
+				const objsAbs = args.absAll(...objs);
+				return args.spawn(this.cc, ['/nologo', '/LD', `/Fe${args.abs(path)}`, ...objsAbs]);
+			});
+			return l;
+		}
 	}
 }
