@@ -130,282 +130,300 @@ describe('Distribution', function () {
 		]);
 	}
 
-	beforeEach(async () => {
-		make = new Makefile({
-			srcRoot: testDir,
-			buildRoot: buildDir,
-		});
-
-		await mkdir(includeDir, { recursive: true });
-		await mkdir(srcDir, { recursive: true });
-	});
-
-	afterEach(async () => {
-		await rm(testDir, { recursive: true });
-	});
-
-	it('builds a single file executable', async () => {
-		await writePath(
-			'src/hello.c',
-			'#include <stdio.h>',
-			'int main(){ printf("hello!"); return 0; }',
-		);
-
-		const d = new Distribution(make, {
-			name: 'hello',
-			version: '1.2.3',
-		});
-
-		const hello = d.addExecutable({
-			name: 'hello',
-			src: ['src/hello.c'],
-		});
-
-		await expectOutput(hello.binary, 'hello!');
-	});
-
-	it('can compile multiple source file exe', async () => {
-		await writePath(
-			'src/hello.c',
-			'#include <stdio.h>',
-			'void hello(){ printf("hello!"); }',
-		);
-
-		await writePath(
-			'src/main.c',
-			'extern void hello();',
-			'int main(){ hello(); return 0; }',
-		);
-
-		const d = new Distribution(make, {
-			name: 'hello',
-			version: '1.2.3',
-		});
-
-		const hello = d.addExecutable({
-			name: 'hello',
-			src: ['src/main.c', 'src/hello.c'],
-		});
-
-		await expectOutput(hello.binary, 'hello!');
-	});
-
-	it('includes the "include" dir by default', async () => {
-		await writePath('include/val.h', '#define VAL 4');
-
-		await writePath(
-			'src/main.c',
-			'#include "val.h"',
-			'#include <stdio.h>',
-			'int main(){ printf("%d", VAL); return 0; }',
-		);
-
-		const d = new Distribution(make, {
-			name: 'test',
-			version: '1.2.3',
-		});
-
-		const hello = d.addExecutable({
-			name: 'test',
-			src: ['src/main.c'],
-		});
-
-		await expectOutput(hello.binary, '4');
-	});
-
-	it('compiles and links libraries', async () => {
-		await writePath('include/add.h', 'int add(int a, int b);');
-
-		await writePath(
-			'src/add.c',
-			'#include "add.h"',
-			'int add(int a, int b){ return a + b; }',
-		);
-
-		await writePath(
-			'src/main.c',
-			'#include "add.h"',
-			'#include <stdio.h>',
-			'int main(){ printf("%d", add(2,2)); return 0; }',
-		);
-
-		const d = new Distribution(make, {
-			name: 'test',
-			version: '1.2.3',
-		});
-
-		const add = d.addLibrary({
-			name: 'add',
-			src: ['src/add.c'],
-		});
-
-		const test = d.addExecutable({
-			name: 'test',
-			src: ['src/main.c'],
-			linkTo: [add],
-		});
-
-		await expectOutput(test.binary, '4');
-	});
-
-	describe('static vs dynamic', () => {
+	describe('development', () => {
 		beforeEach(async () => {
+			make = new Makefile({
+				srcRoot: testDir,
+				buildRoot: buildDir,
+			});
+
+			await mkdir(includeDir, { recursive: true });
+			await mkdir(srcDir, { recursive: true });
+		});
+
+		afterEach(async () => {
+			await rm(testDir, { recursive: true });
+		});
+
+		it('builds a single file executable', async () => {
 			await writePath(
-				'include/image_name.h',
-				'#ifdef _WIN32',
-				'#define EXPORT __declspec(dllexport)',
-				'#else',
-				'#define EXPORT',
-				'#endif',
-				'EXPORT int image_name(char *dst, int sz);',
+				'src/hello.c',
+				'#include <stdio.h>',
+				'int main(){ printf("hello!"); return 0; }',
 			);
 
+			const d = new Distribution(make, {
+				name: 'hello',
+				version: '1.2.3',
+			});
+
+			const hello = d.addExecutable({
+				name: 'hello',
+				src: ['src/hello.c'],
+			});
+
+			await expectOutput(hello.binary, 'hello!');
+		});
+
+		it('can compile multiple source file exe', async () => {
 			await writePath(
-				'src/image_name.c',
-				'#ifdef __linux__',
-				'#define _GNU_SOURCE', // needed for Dl_info
-				'#endif',
-				'#include <string.h>',
-				'#include "image_name.h"',
-				'#ifdef _WIN32',
-				'#include <windows.h>',
-				'int image_name(char *dst, int sz){',
-				' HMODULE module;',
-				' GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, (LPCSTR)image_name, &module);',
-				' GetModuleFileNameA(module, dst, sz);',
-				' return 1;',
-				'}',
-				'#else',
-				'#include <dlfcn.h>',
-				'int image_name(char *dst, int sz){',
-				'	Dl_info info;',
-				'	if (dladdr(image_name, &info)){',
-				'		strlcpy(dst, info.dli_fname, sz);',
-				'		return 1;',
-				'	} else {',
-				'		return 0;',
-				'	}',
-				'}',
-				'#endif',
+				'src/hello.c',
+				'#include <stdio.h>',
+				'void hello(){ printf("hello!"); }',
 			);
 
 			await writePath(
 				'src/main.c',
-				'#include "image_name.h"',
-				'#include <stdio.h>',
-				'int main(){',
-				'	char buf[1024];',
-				'	if (!image_name(buf, sizeof(buf))) return 1;',
-				'	printf("%s", buf);',
-				'	return 0;',
-				'}',
+				'extern void hello();',
+				'int main(){ hello(); return 0; }',
 			);
+
+			const d = new Distribution(make, {
+				name: 'hello',
+				version: '1.2.3',
+			});
+
+			const hello = d.addExecutable({
+				name: 'hello',
+				src: ['src/main.c', 'src/hello.c'],
+			});
+
+			await expectOutput(hello.binary, 'hello!');
 		});
 
-		it('is static by default', async () => {
+		it('includes the "include" dir by default', async () => {
+			await writePath('include/val.h', '#define VAL 4');
+
+			await writePath(
+				'src/main.c',
+				'#include "val.h"',
+				'#include <stdio.h>',
+				'int main(){ printf("%d", VAL); return 0; }',
+			);
+
 			const d = new Distribution(make, {
 				name: 'test',
 				version: '1.2.3',
 			});
 
-			const img = d.addLibrary({
-				name: 'image_name',
-				src: ['src/image_name.c'],
-			});
-
-			const test = d.addExecutable({
+			const hello = d.addExecutable({
 				name: 'test',
 				src: ['src/main.c'],
-				linkTo: [img],
 			});
 
-			await expectOutput(test.binary, make.abs(test.binary));
+			await expectOutput(hello.binary, '4');
 		});
 
-		it('is static when explicitly set to default type', async () => {
+		it('compiles and links libraries', async () => {
+			await writePath('include/add.h', 'int add(int a, int b);');
+
+			await writePath(
+				'src/add.c',
+				'#include "add.h"',
+				'int add(int a, int b){ return a + b; }',
+			);
+
+			await writePath(
+				'src/main.c',
+				'#include "add.h"',
+				'#include <stdio.h>',
+				'int main(){ printf("%d", add(2,2)); return 0; }',
+			);
+
 			const d = new Distribution(make, {
 				name: 'test',
 				version: '1.2.3',
 			});
 
-			const img = d.addLibrary({
-				name: 'image_name',
-				src: ['src/image_name.c'],
-				type: LibraryType.default,
+			const add = d.addLibrary({
+				name: 'add',
+				src: ['src/add.c'],
 			});
 
 			const test = d.addExecutable({
 				name: 'test',
 				src: ['src/main.c'],
-				linkTo: [img],
+				linkTo: [add],
 			});
 
-			await expectOutput(test.binary, make.abs(test.binary));
+			await expectOutput(test.binary, '4');
 		});
 
-		it('is static when explicitly set to static', async () => {
-			const d = new Distribution(make, {
-				name: 'test',
-				version: '1.2.3',
+		describe('static vs dynamic', () => {
+			beforeEach(async () => {
+				await writePath(
+					'include/image_name.h',
+					'#ifdef _WIN32',
+					'#define EXPORT __declspec(dllexport)',
+					'#else',
+					'#define EXPORT',
+					'#endif',
+					'EXPORT int image_name(char *dst, int sz);',
+				);
+
+				await writePath(
+					'src/image_name.c',
+					'#ifdef __linux__',
+					'#define _GNU_SOURCE', // needed for Dl_info
+					'#endif',
+					'#include <string.h>',
+					'#include "image_name.h"',
+					'#ifdef _WIN32',
+					'#include <windows.h>',
+					'int image_name(char *dst, int sz){',
+					' HMODULE module;',
+					' GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, (LPCSTR)image_name, &module);',
+					' GetModuleFileNameA(module, dst, sz);',
+					' return 1;',
+					'}',
+					'#else',
+					'#include <dlfcn.h>',
+					'int image_name(char *dst, int sz){',
+					'	Dl_info info;',
+					'	if (dladdr(image_name, &info)){',
+					'		strlcpy(dst, info.dli_fname, sz);',
+					'		return 1;',
+					'	} else {',
+					'		return 0;',
+					'	}',
+					'}',
+					'#endif',
+				);
+
+				await writePath(
+					'src/main.c',
+					'#include "image_name.h"',
+					'#include <stdio.h>',
+					'int main(){',
+					'	char buf[1024];',
+					'	if (!image_name(buf, sizeof(buf))) return 1;',
+					'	printf("%s", buf);',
+					'	return 0;',
+					'}',
+				);
 			});
 
-			const img = d.addLibrary({
-				name: 'image_name',
-				src: ['src/image_name.c'],
-				type: LibraryType.static,
+			it('is static by default', async () => {
+				const d = new Distribution(make, {
+					name: 'test',
+					version: '1.2.3',
+				});
+
+				const img = d.addLibrary({
+					name: 'image_name',
+					src: ['src/image_name.c'],
+				});
+
+				const test = d.addExecutable({
+					name: 'test',
+					src: ['src/main.c'],
+					linkTo: [img],
+				});
+
+				await expectOutput(test.binary, make.abs(test.binary));
 			});
 
-			const test = d.addExecutable({
-				name: 'test',
-				src: ['src/main.c'],
-				linkTo: [img],
+			it('is static when explicitly set to default type', async () => {
+				const d = new Distribution(make, {
+					name: 'test',
+					version: '1.2.3',
+				});
+
+				const img = d.addLibrary({
+					name: 'image_name',
+					src: ['src/image_name.c'],
+					type: LibraryType.default,
+				});
+
+				const test = d.addExecutable({
+					name: 'test',
+					src: ['src/main.c'],
+					linkTo: [img],
+				});
+
+				await expectOutput(test.binary, make.abs(test.binary));
 			});
 
-			await expectOutput(test.binary, make.abs(test.binary));
-		});
+			it('is static when explicitly set to static', async () => {
+				const d = new Distribution(make, {
+					name: 'test',
+					version: '1.2.3',
+				});
 
-		it('is dynamic when explicitly set to dynamic', async () => {
-			const d = new Distribution(make, {
-				name: 'test',
-				version: '1.2.3',
+				const img = d.addLibrary({
+					name: 'image_name',
+					src: ['src/image_name.c'],
+					type: LibraryType.static,
+				});
+
+				const test = d.addExecutable({
+					name: 'test',
+					src: ['src/main.c'],
+					linkTo: [img],
+				});
+
+				await expectOutput(test.binary, make.abs(test.binary));
 			});
 
-			const img = d.addLibrary({
-				name: 'image_name',
-				src: ['src/image_name.c'],
-				type: LibraryType.dynamic,
-			});
+			it('is dynamic when explicitly set to dynamic', async () => {
+				const d = new Distribution(make, {
+					name: 'test',
+					version: '1.2.3',
+				});
 
-			const test = d.addExecutable({
-				name: 'test',
-				src: ['src/main.c'],
-				linkTo: [img],
-			});
+				const img = d.addLibrary({
+					name: 'image_name',
+					src: ['src/image_name.c'],
+					type: LibraryType.dynamic,
+				});
 
-			await expectOutput(test.binary, make.abs(img.binary));
+				const test = d.addExecutable({
+					name: 'test',
+					src: ['src/main.c'],
+					linkTo: [img],
+				});
+
+				await expectOutput(test.binary, make.abs(img.binary));
+			});
 		});
 	});
 
-	it('installs an executable', async () => {
-		await writePath(
-			'src/main.c',
-			'#include "stdio.h"',
-			'int main(){ printf("hello!"); return 0; }',
-		);
+	describe('installation', () => {
+		before(async () => {
+			make = new Makefile({
+				srcRoot: testDir,
+				buildRoot: buildDir,
+			});
 
-		const d = new Distribution(make, {
-			name: 'test',
-			version: '1.2.3',
+			await mkdir(includeDir, { recursive: true });
+			await mkdir(srcDir, { recursive: true });
+
+			await writePath(
+				'src/main.c',
+				'#include "stdio.h"',
+				'int main(){ printf("hello!"); return 0; }',
+			);
+
+			const d = new Distribution(make, {
+				name: 'test',
+				version: '1.2.3',
+			});
+
+			d.addExecutable({
+				name: 'test',
+				src: ['src/main.c'],
+			});
+
+			await install(d);
 		});
 
-		d.addExecutable({
-			name: 'test',
-			src: ['src/main.c'],
+		after(async () => {
+			await rm(testDir, { recursive: true });
 		});
 
-		await install(d);
-
-		expectOutput('bin/test', 'hello!');
+		it('installs an executable', async () => {
+			expectOutput('bin/test', 'hello!');
+		});
 	});
 
 	// TODO
