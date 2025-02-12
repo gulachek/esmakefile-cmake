@@ -7,6 +7,7 @@ import { ILibrary, Library, ResolvedLibraryType } from './Library.js';
 import { mkdir, copyFile, writeFile } from 'node:fs/promises';
 import { chdir, cwd } from 'node:process';
 import { platform } from 'node:os';
+import { readFileSync } from 'node:fs';
 
 export interface IDistributionOpts {
 	name: string;
@@ -58,6 +59,7 @@ export class Distribution {
 			this._compiler = new GccCompiler(make);
 		}
 
+		this._parseConfig();
 		this._addDist();
 	}
 
@@ -107,6 +109,35 @@ export class Distribution {
 
 	install(target: Executable | Library): void {
 		this._installedTargets.push(target.name);
+	}
+
+	private _parseConfig(): void {
+		const configFile = `${this.name}-config.json`;
+		let configContents: string = '';
+		try {
+			configContents = readFileSync(configFile, 'utf8');
+		} catch {
+			// TODO add error to Makefile if anything other than file not existing
+		}
+
+		if (configContents) {
+			// this can throw. TODO to add error to Makefile
+			const config = JSON.parse(configContents);
+			const buildSharedLibs = config['build-shared-libs'];
+			switch (typeof buildSharedLibs) {
+				case 'boolean':
+				case 'undefined':
+					break;
+				default:
+					throw new Error(
+						`(${configFile}): build-shared-libs can only be boolean type`,
+					);
+			}
+
+			if (buildSharedLibs) {
+				this._defaultLibraryType = ResolvedLibraryType.dynamic;
+			}
+		}
 	}
 
 	private _addDist(): void {

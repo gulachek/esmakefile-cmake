@@ -11,6 +11,7 @@ import { mkdir, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { platform } from 'node:os';
 import { spawnSync, SpawnSyncOptions } from 'node:child_process';
+import { chdir, cwd } from 'node:process';
 
 const testDir = '.test';
 const srcDir = join(testDir, 'src');
@@ -131,6 +132,8 @@ describe('Distribution', function () {
 	}
 
 	describe('development', () => {
+		let prevDir: string = '';
+
 		beforeEach(async () => {
 			make = new Makefile({
 				srcRoot: testDir,
@@ -139,9 +142,12 @@ describe('Distribution', function () {
 
 			await mkdir(includeDir, { recursive: true });
 			await mkdir(srcDir, { recursive: true });
+			prevDir = cwd();
+			chdir(testDir);
 		});
 
 		afterEach(async () => {
+			chdir(prevDir);
 			await rm(testDir, { recursive: true });
 		});
 
@@ -375,6 +381,61 @@ describe('Distribution', function () {
 					name: 'image_name',
 					src: ['src/image_name.c'],
 					type: LibraryType.dynamic,
+				});
+
+				const test = d.addExecutable({
+					name: 'test',
+					src: ['src/main.c'],
+					linkTo: [img],
+				});
+
+				await expectOutput(test.binary, make.abs(img.binary));
+			});
+
+			it('is dynamic when default is set to dynamic', async () => {
+				await writePath(
+					'test-config.json',
+					JSON.stringify({
+						'build-shared-libs': true,
+					}),
+				);
+
+				const d = new Distribution(make, {
+					name: 'test',
+					version: '1.2.3',
+				});
+
+				const img = d.addLibrary({
+					name: 'image_name',
+					src: ['src/image_name.c'],
+				});
+
+				const test = d.addExecutable({
+					name: 'test',
+					src: ['src/main.c'],
+					linkTo: [img],
+				});
+
+				await expectOutput(test.binary, make.abs(img.binary));
+			});
+
+			it('is dynamic when default is set to dynamic and library has explicit default type', async () => {
+				await writePath(
+					'test-config.json',
+					JSON.stringify({
+						'build-shared-libs': true,
+					}),
+				);
+
+				const d = new Distribution(make, {
+					name: 'test',
+					version: '1.2.3',
+				});
+
+				const img = d.addLibrary({
+					name: 'image_name',
+					src: ['src/image_name.c'],
+					type: LibraryType.default,
 				});
 
 				const test = d.addExecutable({
