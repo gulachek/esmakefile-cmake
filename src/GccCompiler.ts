@@ -46,7 +46,7 @@ export class GccCompiler implements ICompiler {
 			});
 		}
 
-		const e = new Executable(exe.outDir.join(exe.name));
+		const e = new Executable(exe.name, exe.outDir.join(exe.name));
 
 		const linkFlags: string[] = [];
 		const libDeps = [];

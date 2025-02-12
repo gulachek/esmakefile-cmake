@@ -399,7 +399,7 @@ describe('Distribution', function () {
 			await mkdir(srcDir, { recursive: true });
 
 			await writePath(
-				'src/main.c',
+				'src/hello.c',
 				'#include "stdio.h"',
 				'int main(){ printf("hello!"); return 0; }',
 			);
@@ -409,10 +409,12 @@ describe('Distribution', function () {
 				version: '1.2.3',
 			});
 
-			d.addExecutable({
-				name: 'test',
-				src: ['src/main.c'],
+			const hello = d.addExecutable({
+				name: 'hello',
+				src: ['src/hello.c'],
 			});
+
+			d.install(hello);
 
 			await install(d);
 		});
@@ -422,7 +424,7 @@ describe('Distribution', function () {
 		});
 
 		it('installs an executable', async () => {
-			expectOutput('bin/test', 'hello!');
+			await expectOutput('bin/hello', 'hello!');
 		});
 	});
 

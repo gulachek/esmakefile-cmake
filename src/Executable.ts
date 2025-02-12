@@ -10,9 +10,11 @@ export interface IExecutable {
 }
 
 export class Executable {
+	readonly name: string;
 	readonly binary: IBuildPath;
 
-	constructor(binary: IBuildPath) {
+	constructor(name: string, binary: IBuildPath) {
+		this.name = name;
 		this.binary = binary;
 	}
 }

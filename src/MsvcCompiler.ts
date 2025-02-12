@@ -37,7 +37,7 @@ export class MsvcCompiler implements ICompiler {
 			});
 		}
 
-		const e = new Executable(exe.outDir.join(exe.name + '.exe'));
+		const e = new Executable(exe.name, exe.outDir.join(exe.name + '.exe'));
 
 		const linkFlags: string[] = [];
 		const libDeps = [];
@@ -91,7 +91,11 @@ export class MsvcCompiler implements ICompiler {
 
 			this.make.add(path, objs, (args) => {
 				const objsAbs = args.absAll(...objs);
-				return args.spawn(this.lib, ['/nologo', `/OUT:${args.abs(path)}`, ...objsAbs]);
+				return args.spawn(this.lib, [
+					'/nologo',
+					`/OUT:${args.abs(path)}`,
+					...objsAbs,
+				]);
 			});
 			return l;
 		} else {
@@ -102,7 +106,12 @@ export class MsvcCompiler implements ICompiler {
 
 			this.make.add([path, importPath], objs, (args) => {
 				const objsAbs = args.absAll(...objs);
-				return args.spawn(this.cc, ['/nologo', '/LD', `/Fe${args.abs(path)}`, ...objsAbs]);
+				return args.spawn(this.cc, [
+					'/nologo',
+					'/LD',
+					`/Fe${args.abs(path)}`,
+					...objsAbs,
+				]);
 			});
 			return l;
 		}
