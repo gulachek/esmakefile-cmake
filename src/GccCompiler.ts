@@ -3,6 +3,7 @@ import { ICompiler } from './Compiler.js';
 import { Executable, IExecutable } from './Executable.js';
 import { ILibrary, Library, ResolvedLibraryType } from './Library.js';
 import { Makefile, Path, IBuildPath } from 'esmakefile';
+import { PkgConfig } from 'espkg-config';
 
 export class GccCompiler implements ICompiler {
 	private make: Makefile;
@@ -10,11 +11,13 @@ export class GccCompiler implements ICompiler {
 	private cc: string;
 	private ar: string;
 	private requiresRpath: boolean = false;
+	private _pkg: PkgConfig;
 
-	constructor(make: Makefile) {
+	constructor(make: Makefile, pkg: PkgConfig) {
 		this.make = make;
 		this.cc = 'cc';
 		this.ar = 'ar';
+		this._pkg = pkg;
 
 		if (platform() === 'darwin') {
 			this._dylibExt = '.dylib';
@@ -31,13 +34,17 @@ export class GccCompiler implements ICompiler {
 
 		const objs: IBuildPath[] = [];
 
+		const pkgNames = exe.pkgs.map((p) => p.name);
+
 		for (const s of exe.src) {
 			const obj = Path.gen(s, { ext: '.o' });
 			objs.push(obj);
 
-			this.make.add(obj, [s], (args) => {
+			this.make.add(obj, [s], async (args) => {
+				const { flags: pkgCflags } = await this._pkg.cflags(pkgNames);
 				return args.spawn(this.cc, [
 					'-c',
+					...pkgCflags,
 					...includeFlags,
 					'-o',
 					args.abs(obj),
@@ -63,13 +70,17 @@ export class GccCompiler implements ICompiler {
 			linkFlags.push(`-Wl,-rpath=$ORIGIN`);
 		}
 
-		this.make.add(e.binary, [...libDeps, ...objs], (args) => {
+		this.make.add(e.binary, [...libDeps, ...objs], async (args) => {
+			// TODO - dynamic linking too
+			const { flags: pkgLibs } = await this._pkg.staticLibs(pkgNames);
+
 			const objsAbs = args.absAll(...objs);
 			return args.spawn(this.cc, [
 				'-o',
 				args.abs(e.binary),
 				...objsAbs,
 				...linkFlags,
+				...pkgLibs,
 			]);
 		});
 

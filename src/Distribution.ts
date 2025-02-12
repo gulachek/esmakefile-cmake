@@ -3,11 +3,19 @@ import { ICompiler } from './Compiler.js';
 import { GccCompiler } from './GccCompiler.js';
 import { MsvcCompiler } from './MsvcCompiler.js';
 import { Executable, IExecutable } from './Executable.js';
-import { ILibrary, Library, ResolvedLibraryType } from './Library.js';
+import {
+	ILibrary,
+	Library,
+	ResolvedLibraryType,
+	IImportedLibrary,
+	isImported,
+} from './Library.js';
 import { mkdir, copyFile, writeFile } from 'node:fs/promises';
 import { chdir, cwd } from 'node:process';
 import { platform } from 'node:os';
 import { readFileSync } from 'node:fs';
+import { PkgConfig } from 'espkg-config';
+import { resolve } from 'node:path';
 
 export interface IDistributionOpts {
 	name: string;
@@ -17,7 +25,7 @@ export interface IDistributionOpts {
 export interface IAddExecutableOpts {
 	name: string;
 	src: PathLike[];
-	linkTo?: Library[];
+	linkTo?: (Library | IImportedLibrary)[];
 }
 
 export enum LibraryType {
@@ -29,6 +37,7 @@ export enum LibraryType {
 export interface IAddLibraryOpts {
 	name: string;
 	src: PathLike[];
+	includeDirs?: PathLike[];
 	type?: LibraryType;
 }
 
@@ -45,6 +54,7 @@ export class Distribution {
 
 	private _compiler: ICompiler;
 	private _defaultLibraryType: ResolvedLibraryType = ResolvedLibraryType.static;
+	private _pkg: PkgConfig;
 
 	constructor(make: Makefile, opts: IDistributionOpts) {
 		this.make = make;
@@ -52,11 +62,15 @@ export class Distribution {
 		this.version = opts.version;
 		this.outDir = Path.build(this.name);
 		this.dist = Path.build(`${this.name}-${this.version}.tgz`);
+		this._pkg = new PkgConfig({
+			// TODO - relative to cwd or srcdir or what?
+			searchPaths: [resolve('vendor/lib/pkgconfig')],
+		});
 
 		if (platform() === 'win32') {
 			this._compiler = new MsvcCompiler(make);
 		} else {
-			this._compiler = new GccCompiler(make);
+			this._compiler = new GccCompiler(make, this._pkg);
 		}
 
 		this._parseConfig();
@@ -65,12 +79,25 @@ export class Distribution {
 
 	addExecutable(opts: IAddExecutableOpts): Executable {
 		// TODO validate opts
+		const linkTo: Library[] = [];
+		const pkgs: IImportedLibrary[] = [];
+		if (opts.linkTo) {
+			for (const l of opts.linkTo) {
+				if (isImported(l)) {
+					pkgs.push(l);
+				} else {
+					linkTo.push(l);
+				}
+			}
+		}
+
 		const exe: IExecutable = {
 			name: opts.name,
 			outDir: this.outDir,
 			src: opts.src.map((s) => Path.src(s)),
 			includeDirs: [Path.src('include')],
-			linkTo: opts.linkTo || [],
+			linkTo,
+			pkgs,
 		};
 
 		this._executables.push(exe);
@@ -80,11 +107,20 @@ export class Distribution {
 
 	addLibrary(opts: IAddLibraryOpts): Library {
 		// TODO validate opts
+		const includeDirs: Path[] = [];
+		if (opts.includeDirs) {
+			for (const i of opts.includeDirs) {
+				includeDirs.push(Path.src(i));
+			}
+		} else {
+			includeDirs.push(Path.src('include'));
+		}
+
 		const lib: ILibrary = {
 			name: opts.name,
 			outDir: this.outDir,
 			src: opts.src.map((s) => Path.src(s)),
-			includeDirs: [Path.src('include')],
+			includeDirs,
 			linkTo: [],
 			type: this._resolveLibraryType(opts.type || LibraryType.default),
 		};
@@ -109,6 +145,10 @@ export class Distribution {
 
 	install(target: Executable | Library): void {
 		this._installedTargets.push(target.name);
+	}
+
+	findPackage(name: string): IImportedLibrary {
+		return { name };
 	}
 
 	private _parseConfig(): void {

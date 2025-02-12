@@ -1,5 +1,5 @@
 import { IBuildPath, Path } from 'esmakefile';
-import { Library } from './Library.js';
+import { Library, IImportedLibrary } from './Library.js';
 
 export interface IExecutable {
 	name: string;
@@ -7,6 +7,7 @@ export interface IExecutable {
 	src: Path[];
 	includeDirs: Path[];
 	linkTo: Library[];
+	pkgs: IImportedLibrary[];
 }
 
 export class Executable {

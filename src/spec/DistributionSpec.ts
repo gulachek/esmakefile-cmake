@@ -8,12 +8,12 @@ import {
 	BuildPathLike,
 } from 'esmakefile';
 import { mkdir, rm, writeFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { platform } from 'node:os';
 import { spawnSync, SpawnSyncOptions } from 'node:child_process';
 import { chdir, cwd } from 'node:process';
 
-const testDir = '.test';
+const testDir = resolve('.test');
 const srcDir = join(testDir, 'src');
 const buildDir = join(testDir, 'build');
 const stageDir = join(testDir, 'stage');
@@ -28,7 +28,7 @@ async function updateTarget(
 		goal,
 	);
 
-	if (!result) {
+	if (!result || warnings.length > 0) {
 		for (const [id, r] of recipes) {
 			const { result, consoleOutput } = r;
 			const t = make.rule(id).targets();
@@ -253,6 +253,78 @@ describe('Distribution', function () {
 			});
 
 			await expectOutput(test.binary, '4');
+		});
+
+		it('can find an external package for linking', async () => {
+			// General strategy - build one distribution and hand-craft
+			// pkgconfig file to that distribution's build. Can test
+			// generation of installed pkgconfig in installation tests
+			await mkdir(join(testDir, 'dep', 'include'), { recursive: true });
+			await mkdir(join(testDir, 'dep', 'src'));
+			await mkdir(join(testDir, 'vendor', 'lib', 'pkgconfig'), {
+				recursive: true,
+			});
+
+			const dep = new Distribution(make, {
+				name: 'dep',
+				version: '2.3.4',
+			});
+
+			await writePath('dep/include/add.h', 'int add(int a, int b);');
+
+			await writePath(
+				'dep/src/add.c',
+				'#include "add.h"',
+				'int add(int a, int b){ return a + b; }',
+			);
+
+			const add = dep.addLibrary({
+				name: 'add',
+				src: ['dep/src/add.c'],
+				includeDirs: ['dep/include'],
+			});
+
+			await updateTarget(make, add.binary);
+
+			const depInclude = make.abs(Path.src('dep/include'));
+			const libDir = make.abs(add.binary.dir());
+			let cflags = `-I${depInclude}`;
+			let libs = `-L${libDir} -ladd`;
+			if (platform() === 'win32') {
+				cflags = `/I${depInclude}`;
+				libs = make.abs(add.binary);
+			}
+
+			await writePath(
+				'vendor/lib/pkgconfig/add.pc',
+				'Name: add',
+				'Version: 2.3.4',
+				'Description: add two integers',
+				`Cflags: ${cflags}`,
+				`Libs: ${libs}`,
+			);
+
+			const d = new Distribution(make, {
+				name: 'test',
+				version: '1.2.3',
+			});
+
+			const addPkg = d.findPackage('add');
+
+			await writePath(
+				'src/test.c',
+				'#include <add.h>',
+				'#include <stdio.h>',
+				'int main() { printf("2+2=%d", add(2,2)); return 0; }',
+			);
+
+			const test = d.addExecutable({
+				name: 'test',
+				src: ['src/test.c'],
+				linkTo: [addPkg],
+			});
+
+			await expectOutput(test.binary, '2+2=4');
 		});
 
 		describe('static vs dynamic', () => {

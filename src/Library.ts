@@ -14,9 +14,14 @@ export interface ILibrary {
 	type: ResolvedLibraryType;
 }
 
+export interface IImportedLibrary {
+	name: string;
+}
+
 export class Library {
 	name: string;
 	binary: IBuildPath;
+	// TODO - reconcile this w/ CMake's concept of import library
 	importLibrary?: IBuildPath;
 	type: ResolvedLibraryType;
 
@@ -24,4 +29,10 @@ export class Library {
 		this.name = name;
 		this.binary = binary;
 	}
+}
+
+export function isImported(
+	lib: IImportedLibrary | Library,
+): lib is IImportedLibrary {
+	return typeof (lib as Library).binary === 'undefined';
 }
