@@ -271,6 +271,7 @@ export class Distribution {
 				}
 
 				// Install .pc file
+				// TODO Libs.private: -lc++ for c++ library?
 				const pc: string[] = [
 					'prefix=${pcfiledir}/../..',
 					'libdir=${prefix}/lib',

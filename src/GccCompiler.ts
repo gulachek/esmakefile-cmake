@@ -4,11 +4,13 @@ import { Executable, IExecutable } from './Executable.js';
 import { ILibrary, Library, ResolvedLibraryType } from './Library.js';
 import { Makefile, Path, IBuildPath } from 'esmakefile';
 import { PkgConfig } from 'espkg-config';
+import { isCxxSrc, isCxxLink } from './Source.js';
 
 export class GccCompiler implements ICompiler {
 	private make: Makefile;
 	private _dylibExt: string;
 	private cc: string;
+	private cxx: string;
 	private ar: string;
 	private requiresRpath: boolean = false;
 	private _pkg: PkgConfig;
@@ -16,6 +18,7 @@ export class GccCompiler implements ICompiler {
 	constructor(make: Makefile, pkg: PkgConfig) {
 		this.make = make;
 		this.cc = 'cc';
+		this.cxx = 'c++';
 		this.ar = 'ar';
 		this._pkg = pkg;
 
@@ -41,8 +44,13 @@ export class GccCompiler implements ICompiler {
 			objs.push(obj);
 
 			this.make.add(obj, [s], async (args) => {
+				let cc = this.cc;
+				if (isCxxSrc(s)) {
+					cc = this.cxx;
+				}
+
 				const { flags: pkgCflags } = await this._pkg.cflags(pkgNames);
-				return args.spawn(this.cc, [
+				return args.spawn(cc, [
 					'-c',
 					...pkgCflags,
 					...includeFlags,
@@ -70,12 +78,19 @@ export class GccCompiler implements ICompiler {
 			linkFlags.push(`-Wl,-rpath=$ORIGIN`);
 		}
 
+		const linkCxx = isCxxLink(exe.src);
+
 		this.make.add(e.binary, [...libDeps, ...objs], async (args) => {
+			let cc = this.cc;
+			if (linkCxx) {
+				cc = this.cxx;
+			}
+
 			// TODO - dynamic linking too
 			const { flags: pkgLibs } = await this._pkg.staticLibs(pkgNames);
 
 			const objsAbs = args.absAll(...objs);
-			return args.spawn(this.cc, [
+			return args.spawn(cc, [
 				'-o',
 				args.abs(e.binary),
 				...objsAbs,

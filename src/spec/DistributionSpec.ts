@@ -197,6 +197,33 @@ describe('Distribution', function () {
 			await expectOutput(hello.binary, 'hello!');
 		});
 
+		// TODO for library too
+		it('links mixed c/c++ as a c++ executable', async () => {
+			await writePath(
+				'src/hello.cpp',
+				'#include <iostream>',
+				'extern "C" void hello(){ std::cout << "hello!"; }',
+			);
+
+			await writePath(
+				'src/main.c',
+				'extern void hello();',
+				'int main(){ hello(); return 0; }',
+			);
+
+			const d = new Distribution(make, {
+				name: 'hello',
+				version: '1.2.3',
+			});
+
+			const hello = d.addExecutable({
+				name: 'hello',
+				src: ['src/main.c', 'src/hello.cpp'],
+			});
+
+			await expectOutput(hello.binary, 'hello!');
+		});
+
 		it('includes the "include" dir by default', async () => {
 			await writePath('include/val.h', '#define VAL 4');
 
