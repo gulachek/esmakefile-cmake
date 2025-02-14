@@ -125,7 +125,7 @@ describe('Distribution', function () {
 			'--install',
 			stageDir,
 			'--prefix',
-			testDir,
+			join(testDir, 'vendor'),
 			'--config',
 			'Release',
 		]);
@@ -522,6 +522,8 @@ describe('Distribution', function () {
 	});
 
 	describe('installation', () => {
+		let oldDir: string = '';
+
 		before(async () => {
 			make = new Makefile({
 				srcRoot: testDir,
@@ -531,10 +533,20 @@ describe('Distribution', function () {
 			await mkdir(includeDir, { recursive: true });
 			await mkdir(srcDir, { recursive: true });
 
+			oldDir = cwd();
+			chdir(testDir);
+
 			await writePath(
 				'src/hello.c',
 				'#include "stdio.h"',
 				'int main(){ printf("hello!"); return 0; }',
+			);
+
+			await writePath('include/add.h', 'int add(int a, int b);');
+			await writePath(
+				'src/add.c',
+				'#include "add.h"',
+				'int add(int a, int b) { return a + b; }',
 			);
 
 			const d = new Distribution(make, {
@@ -547,17 +559,52 @@ describe('Distribution', function () {
 				src: ['src/hello.c'],
 			});
 
+			const add = d.addLibrary({
+				name: 'add',
+				src: ['src/add.c'],
+			});
+
+			// TODO - install multiple in same call
 			d.install(hello);
+			d.install(add);
 
 			await install(d);
 		});
 
 		after(async () => {
+			chdir(oldDir);
 			await rm(testDir, { recursive: true });
 		});
 
 		it('installs an executable', async () => {
-			await expectOutput('bin/hello', 'hello!');
+			await expectOutput('vendor/bin/hello', 'hello!');
+		});
+
+		it('installs a library w/ pkgconfig', async () => {
+			await writePath(
+				'src/print.c',
+				'#include <stdio.h>',
+				'#include <add.h>',
+				'int main() {',
+				'printf("2+2=%d", add(2,2));',
+				'return 0;',
+				'}',
+			);
+
+			const d = new Distribution(make, {
+				name: 'math',
+				version: '1.1.1',
+			});
+
+			const add = d.findPackage('add');
+
+			const print = d.addExecutable({
+				name: 'print',
+				src: ['src/print.c'],
+				linkTo: [add],
+			});
+
+			await expectOutput(print.binary, '2+2=4');
 		});
 	});
 
