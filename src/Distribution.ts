@@ -224,8 +224,6 @@ export class Distribution {
 			await mkdir(dirAbs, { recursive: true });
 			args.logStream.write(`Done making ${dirAbs}\n`);
 
-			const includesToCopy: Path[] = [];
-
 			for (const exe of this._executables) {
 				cmake.push(`add_executable(${exe.name}`);
 				for (const s of exe.src) {

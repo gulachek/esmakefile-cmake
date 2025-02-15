@@ -1,6 +1,11 @@
 import { ICompiler } from './Compiler.js';
 import { Executable, IExecutable } from './Executable.js';
-import { ILibrary, Library, ResolvedLibraryType } from './Library.js';
+import {
+	ILibrary,
+	Library,
+	ResolvedLibraryType,
+	makeLibrary,
+} from './Library.js';
 import { Makefile, Path, IBuildPath } from 'esmakefile';
 
 export class MsvcCompiler implements ICompiler {
@@ -87,7 +92,7 @@ export class MsvcCompiler implements ICompiler {
 
 		if (lib.type === ResolvedLibraryType.static) {
 			const path = lib.outDir.join(lib.name + '.lib');
-			const l = new Library(lib.name, path);
+			const l = makeLibrary(lib, path);
 
 			this.make.add(path, objs, (args) => {
 				const objsAbs = args.absAll(...objs);
@@ -101,8 +106,7 @@ export class MsvcCompiler implements ICompiler {
 		} else {
 			const path = lib.outDir.join(lib.name + '.dll');
 			const importPath = lib.outDir.join(lib.name + '.lib');
-			const l = new Library(lib.name, path);
-			l.importLibrary = importPath;
+			const l = makeLibrary(lib, path, importPath);
 
 			this.make.add([path, importPath], objs, (args) => {
 				const objsAbs = args.absAll(...objs);

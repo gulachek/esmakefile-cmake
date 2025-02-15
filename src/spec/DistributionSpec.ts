@@ -282,7 +282,7 @@ describe('Distribution', function () {
 			await expectOutput(test.binary, '4');
 		});
 
-		xit('allows libraries to include directories too', async () => {
+		it('carries includes from linked libraries', async () => {
 			const customInclude = join(testDir, 'custom-include');
 			await mkdir(customInclude);
 
@@ -309,7 +309,7 @@ describe('Distribution', function () {
 			const add = d.addLibrary({
 				name: 'add',
 				src: ['src/add.c'],
-				includeDirs: [customInclude],
+				includeDirs: ['custom-include'],
 			});
 
 			const test = d.addExecutable({

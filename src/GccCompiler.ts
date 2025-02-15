@@ -1,7 +1,13 @@
 import { platform } from 'node:os';
 import { ICompiler } from './Compiler.js';
 import { Executable, IExecutable } from './Executable.js';
-import { ILibrary, Library, ResolvedLibraryType } from './Library.js';
+import {
+	ILibrary,
+	Library,
+	ResolvedLibraryType,
+	allIncludes,
+	makeLibrary,
+} from './Library.js';
 import { Makefile, Path, IBuildPath } from 'esmakefile';
 import { PkgConfig } from 'espkg-config';
 import { isCxxSrc, isCxxLink } from './Source.js';
@@ -31,7 +37,7 @@ export class GccCompiler implements ICompiler {
 	}
 
 	public addExecutable(exe: IExecutable): Executable {
-		const includeFlags = exe.includeDirs.map((i) => {
+		const includeFlags = allIncludes(exe).map((i) => {
 			return `-I${this.make.abs(i)}`;
 		});
 
@@ -103,7 +109,7 @@ export class GccCompiler implements ICompiler {
 	}
 
 	public addLibrary(lib: ILibrary): Library {
-		const includeFlags = lib.includeDirs.map((i) => {
+		const includeFlags = allIncludes(lib).map((i) => {
 			return `-I${this.make.abs(i)}`;
 		});
 
@@ -127,7 +133,7 @@ export class GccCompiler implements ICompiler {
 
 		if (lib.type === ResolvedLibraryType.static) {
 			const path = lib.outDir.join(`lib${lib.name}.a`);
-			const l = new Library(lib.name, path);
+			const l = makeLibrary(lib, path);
 
 			this.make.add(path, objs, (args) => {
 				const objsAbs = args.absAll(...objs);
@@ -136,7 +142,7 @@ export class GccCompiler implements ICompiler {
 			return l;
 		} else {
 			const path = lib.outDir.join(`lib${lib.name}${this._dylibExt}`);
-			const l = new Library(lib.name, path);
+			const l = makeLibrary(lib, path);
 
 			this.make.add(path, objs, (args) => {
 				const objsAbs = args.absAll(...objs);
