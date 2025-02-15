@@ -393,6 +393,44 @@ describe('Distribution', function () {
 			await expectOutput(test.binary, '2+2=4');
 		});
 
+		it('can add a unit test executable', async () => {
+			await mkdir(join(testDir, 'test'));
+			await writePath('include/add.h', 'int add(int a, int b);');
+			await writePath('src/add.c', 'int add(int a, int b) { return a + b; }');
+
+			await writePath(
+				'test/add_test.c',
+				'#include "add.h"',
+				'int main() {',
+				'return add(2,2) != 4;',
+				'}',
+			);
+
+			const d = new Distribution(make, {
+				name: 'add',
+				version: '1.2.3',
+			});
+
+			const add = d.addLibrary({
+				name: 'add',
+				src: ['src/add.c'],
+			});
+
+			const { run } = d.addTest({
+				name: 'add_test',
+				src: ['test/add_test.c'],
+				linkTo: [add],
+			});
+
+			await updateTarget(make, run);
+
+			// also make sure test-add rule works
+			await rm(buildDir, { recursive: true });
+
+			expect(d.test.rel()).to.equal('test-add');
+			await updateTarget(make, 'test-add');
+		});
+
 		describe('static vs dynamic', () => {
 			beforeEach(async () => {
 				await writePath(

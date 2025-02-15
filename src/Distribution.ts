@@ -28,6 +28,13 @@ export interface IAddExecutableOpts {
 	linkTo?: (Library | IImportedLibrary)[];
 }
 
+export interface IAddTestOpts extends IAddExecutableOpts {}
+
+export interface ITest {
+	exe: Executable;
+	run: IBuildPath;
+}
+
 export enum LibraryType {
 	default = 'default',
 	static = 'static',
@@ -47,6 +54,7 @@ export class Distribution {
 	readonly version: string;
 	readonly outDir: IBuildPath;
 	readonly dist: IBuildPath;
+	readonly test: IBuildPath;
 
 	private _executables: IExecutable[] = [];
 	private _libraries: ILibrary[] = [];
@@ -62,6 +70,8 @@ export class Distribution {
 		this.version = opts.version;
 		this.outDir = Path.build(this.name);
 		this.dist = Path.build(`${this.name}-${this.version}.tgz`);
+		this.test = Path.build(`test-${this.name}`);
+
 		this._pkg = new PkgConfig({
 			// TODO - relative to cwd or srcdir or what?
 			searchPaths: [resolve('vendor/lib/pkgconfig')],
@@ -130,6 +140,28 @@ export class Distribution {
 		return this._compiler.addLibrary(lib);
 	}
 
+	install(target: Executable | Library): void {
+		this._installedTargets.push(target.name);
+	}
+
+	findPackage(name: string): IImportedLibrary {
+		return { name };
+	}
+
+	// TODO - exclude from distribution
+	addTest(opts: IAddTestOpts): ITest {
+		const exe = this.addExecutable(opts);
+
+		const run = Path.gen(exe.binary, { ext: '.run' });
+		this.make.add(run, [exe.binary], (args) => {
+			return args.spawn(args.abs(exe.binary), []);
+		});
+
+		this.make.add(this.test, [run]);
+
+		return { exe, run };
+	}
+
 	private _resolveLibraryType(type: LibraryType): ResolvedLibraryType {
 		switch (type) {
 			case LibraryType.static:
@@ -141,14 +173,6 @@ export class Distribution {
 			default:
 				throw new Error(`Unexpected LibraryType '${type}'`);
 		}
-	}
-
-	install(target: Executable | Library): void {
-		this._installedTargets.push(target.name);
-	}
-
-	findPackage(name: string): IImportedLibrary {
-		return { name };
 	}
 
 	private _parseConfig(): void {
