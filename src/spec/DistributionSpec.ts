@@ -201,8 +201,8 @@ describe('Distribution', function () {
 		it('links mixed c/c++ as a c++ executable', async () => {
 			await writePath(
 				'src/hello.cpp',
-				'#include <iostream>',
-				'extern "C" void hello(){ std::cout << "hello!"; }',
+				'#include <cstdio>',
+				'extern "C" void hello(){ std::printf("hello!"); }',
 			);
 
 			await writePath(
@@ -275,9 +275,9 @@ describe('Distribution', function () {
 		it('can specify c++17', async () => {
 			await writePath(
 				'src/printv.cpp',
-				'#include <iostream>',
+				'#include <cstdio>',
 				'int main(){',
-				'std::cout << __cplusplus;',
+				'std::printf("%d", __cplusplus);',
 				'return 0;',
 				'}',
 			);
@@ -299,9 +299,9 @@ describe('Distribution', function () {
 		it('can specify c++20', async () => {
 			await writePath(
 				'src/printv.cpp',
-				'#include <iostream>',
+				'#include <cstdio>',
 				'int main(){',
-				'std::cout << __cplusplus;',
+				'std::printf("%d", __cplusplus);',
 				'return 0;',
 				'}',
 			);
@@ -737,9 +737,15 @@ describe('Distribution', function () {
 			chdir(testDir);
 
 			await writePath(
-				'src/hello.c',
-				'#include "stdio.h"',
-				'int main(){ printf("hello!"); return 0; }',
+				'src/printv.c',
+				'#include <stdio.h>',
+				'int main(){ printf("%d", __STDC_VERSION__); return 0; }',
+			);
+
+			await writePath(
+				'src/printvxx.cpp',
+				'#include <cstdio>',
+				'int main(){ std::printf("%d", __cplusplus); return 0; }',
 			);
 
 			await writePath('include/add.h', 'int add(int a, int b);');
@@ -752,11 +758,18 @@ describe('Distribution', function () {
 			const d = new Distribution(make, {
 				name: 'test',
 				version: '1.2.3',
+				cStd: 11,
+				cxxStd: 20,
 			});
 
-			const hello = d.addExecutable({
-				name: 'hello',
-				src: ['src/hello.c'],
+			const printv = d.addExecutable({
+				name: 'printv',
+				src: ['src/printv.c'],
+			});
+
+			const printvxx = d.addExecutable({
+				name: 'printv++',
+				src: ['src/printvxx.cpp'],
 			});
 
 			const add = d.addLibrary({
@@ -765,7 +778,8 @@ describe('Distribution', function () {
 			});
 
 			// TODO - install multiple in same call
-			d.install(hello);
+			d.install(printv);
+			d.install(printvxx);
 			d.install(add);
 
 			await install(d);
@@ -777,7 +791,8 @@ describe('Distribution', function () {
 		});
 
 		it('installs an executable', async () => {
-			await expectOutput('vendor/bin/hello', 'hello!');
+			await expectOutput('vendor/bin/printv', '201112');
+			await expectOutput('vendor/bin/printv++', '202002');
 		});
 
 		it('installs a library w/ pkgconfig', async () => {

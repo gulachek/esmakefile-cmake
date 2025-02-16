@@ -224,6 +224,14 @@ export class Distribution {
 				'',
 			];
 
+			if (this.cStd) {
+				cmake.push(`set(CMAKE_C_STANDARD ${this.cStd})`);
+			}
+
+			if (this.cxxStd) {
+				cmake.push(`set(CMAKE_CXX_STANDARD ${this.cxxStd})`);
+			}
+
 			// copy all source
 			const dir = Path.build(`${this.name}-${this.version}`);
 			const dirAbs = args.abs(dir);
