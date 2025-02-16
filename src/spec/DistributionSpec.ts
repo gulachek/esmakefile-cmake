@@ -120,14 +120,14 @@ describe('Distribution', function () {
 		await mkdir(stageDir);
 		await run('cmake', ['-B', stageDir, '-S', join(testDir, 'test-1.2.3')]);
 		// Specify config b.c. default for MS is Debug for --build and Release for --install
-		await run('cmake', ['--build', stageDir, '--config', 'Release']);
+		await run('cmake', ['--build', stageDir /*'--config', 'Release'*/]);
 		await run('cmake', [
 			'--install',
 			stageDir,
 			'--prefix',
 			join(testDir, 'vendor'),
-			'--config',
-			'Release',
+			//'--config',
+			//'Release',
 		]);
 	}
 
@@ -820,6 +820,39 @@ describe('Distribution', function () {
 			});
 
 			await expectOutput(print.binary, '2+2=4');
+		});
+
+		it('installs a CMake package for library', async () => {
+			await writePath(
+				'src/print.c',
+				'#include <stdio.h>',
+				'#include <add.h>',
+				'int main() {',
+				'printf("2+2=%d", add(2,2));',
+				'return 0;',
+				'}',
+			);
+
+			await writePath(
+				'CMakeLists.txt',
+				'cmake_minimum_required(VERSION 3.8)',
+				'project(Test)',
+				'find_package(add REQUIRED)',
+				'add_executable(print src/print.c)',
+				'target_link_libraries(print PRIVATE add)',
+			);
+
+			await rm(buildDir, { recursive: true });
+			debugger;
+			await run('cmake', [
+				'-S',
+				testDir,
+				'-B',
+				buildDir,
+				`-DCMAKE_PREFIX_PATH=${join(testDir, 'vendor')}`,
+			]);
+			await run('cmake', ['--build', buildDir]);
+			expectOutput(join(buildDir, 'print'), '2+2=4');
 		});
 	});
 
