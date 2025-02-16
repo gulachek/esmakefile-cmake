@@ -6,6 +6,7 @@ export interface ILinkedCompilation {
 	src: Path[];
 	includeDirs: Path[];
 	linkTo: Library[];
+	pkgs: IImportedLibrary[];
 }
 
 export function allIncludes(c: ILinkedCompilation): Path[] {

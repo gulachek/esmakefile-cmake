@@ -7,10 +7,11 @@ import {
 	ResolvedLibraryType,
 	allIncludes,
 	makeLibrary,
+	ILinkedCompilation,
 } from './Library.js';
 import { Makefile, Path, IBuildPath } from 'esmakefile';
 import { PkgConfig } from 'espkg-config';
-import { isCxxSrc, isCxxLink } from './Source.js';
+import { isCxxSrc, isCxxLink, CStandard, CxxStandard } from './Source.js';
 
 export class GccCompiler implements ICompiler {
 	private make: Makefile;
@@ -20,13 +21,22 @@ export class GccCompiler implements ICompiler {
 	private ar: string;
 	private requiresRpath: boolean = false;
 	private _pkg: PkgConfig;
+	private _cStd?: CStandard;
+	private _cxxStd?: CxxStandard;
 
-	constructor(make: Makefile, pkg: PkgConfig) {
+	constructor(
+		make: Makefile,
+		pkg: PkgConfig,
+		cStd?: CStandard,
+		cxxStd?: CxxStandard,
+	) {
 		this.make = make;
 		this.cc = 'cc';
 		this.cxx = 'c++';
 		this.ar = 'ar';
 		this._pkg = pkg;
+		this._cStd = cStd;
+		this._cxxStd = cxxStd;
 
 		if (platform() === 'darwin') {
 			this._dylibExt = '.dylib';
@@ -36,28 +46,35 @@ export class GccCompiler implements ICompiler {
 		}
 	}
 
-	public addExecutable(exe: IExecutable): Executable {
-		const includeFlags = allIncludes(exe).map((i) => {
+	private _compile(c: ILinkedCompilation): IBuildPath[] {
+		const includeFlags = allIncludes(c).map((i) => {
 			return `-I${this.make.abs(i)}`;
 		});
 
 		const objs: IBuildPath[] = [];
 
-		const pkgNames = exe.pkgs.map((p) => p.name);
+		// TODO transitive deps
+		const pkgNames = c.pkgs.map((p) => p.name);
 
-		for (const s of exe.src) {
+		for (const s of c.src) {
 			const obj = Path.gen(s, { ext: '.o' });
 			objs.push(obj);
 
 			this.make.add(obj, [s], async (args) => {
-				let cc = this.cc;
+				const flags = ['-c'];
+
+				let cc: string;
 				if (isCxxSrc(s)) {
 					cc = this.cxx;
+					if (this._cxxStd) flags.push(`-std=c++${this._cxxStd}`);
+				} else {
+					cc = this.cc;
+					if (this._cStd) flags.push(`-std=c${this._cStd}`);
 				}
 
 				const { flags: pkgCflags } = await this._pkg.cflags(pkgNames);
 				return args.spawn(cc, [
-					'-c',
+					...flags,
 					...pkgCflags,
 					...includeFlags,
 					'-o',
@@ -66,6 +83,12 @@ export class GccCompiler implements ICompiler {
 				]);
 			});
 		}
+
+		return objs;
+	}
+
+	public addExecutable(exe: IExecutable): Executable {
+		const objs = this._compile(exe);
 
 		const e = new Executable(exe.name, exe.outDir.join(exe.name));
 
@@ -85,6 +108,7 @@ export class GccCompiler implements ICompiler {
 		}
 
 		const linkCxx = isCxxLink(exe.src);
+		const pkgNames = exe.pkgs.map((p) => p.name);
 
 		this.make.add(e.binary, [...libDeps, ...objs], async (args) => {
 			let cc = this.cc;
@@ -109,27 +133,7 @@ export class GccCompiler implements ICompiler {
 	}
 
 	public addLibrary(lib: ILibrary): Library {
-		const includeFlags = allIncludes(lib).map((i) => {
-			return `-I${this.make.abs(i)}`;
-		});
-
-		const objs: IBuildPath[] = [];
-
-		for (const s of lib.src) {
-			const obj = Path.gen(s, { ext: '.o' });
-			objs.push(obj);
-
-			this.make.add(obj, [s], (args) => {
-				return args.spawn(this.cc, [
-					'-c',
-					'-fPIC',
-					...includeFlags,
-					'-o',
-					args.abs(obj),
-					args.abs(s),
-				]);
-			});
-		}
+		const objs = this._compile(lib);
 
 		if (lib.type === ResolvedLibraryType.static) {
 			const path = lib.outDir.join(`lib${lib.name}.a`);

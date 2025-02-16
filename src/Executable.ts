@@ -1,9 +1,7 @@
 import { IBuildPath } from 'esmakefile';
-import { IImportedLibrary, ILinkedCompilation } from './Library.js';
+import { ILinkedCompilation } from './Library.js';
 
-export interface IExecutable extends ILinkedCompilation {
-	pkgs: IImportedLibrary[];
-}
+export interface IExecutable extends ILinkedCompilation {}
 
 export class Executable {
 	readonly name: string;

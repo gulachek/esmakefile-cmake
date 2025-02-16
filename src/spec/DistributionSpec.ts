@@ -224,6 +224,102 @@ describe('Distribution', function () {
 			await expectOutput(hello.binary, 'hello!');
 		});
 
+		it('can specify c11', async () => {
+			await writePath(
+				'src/printv.c',
+				'#include <stdio.h>',
+				'int main(){',
+				'printf("%d", __STDC_VERSION__);',
+				'return 0;',
+				'}',
+			);
+
+			const d = new Distribution(make, {
+				name: 'test',
+				version: '1.2.3',
+				cStd: 11,
+			});
+
+			const t = d.addExecutable({
+				name: 'printv',
+				src: ['src/printv.c'],
+			});
+
+			await expectOutput(t.binary, '201112');
+		});
+
+		it('can specify c17', async () => {
+			await writePath(
+				'src/printv.c',
+				'#include <stdio.h>',
+				'int main(){',
+				'printf("%d", __STDC_VERSION__);',
+				'return 0;',
+				'}',
+			);
+
+			const d = new Distribution(make, {
+				name: 'test',
+				version: '1.2.3',
+				cStd: 17,
+			});
+
+			const t = d.addExecutable({
+				name: 'printv',
+				src: ['src/printv.c'],
+			});
+
+			await expectOutput(t.binary, '201710');
+		});
+
+		it('can specify c++17', async () => {
+			await writePath(
+				'src/printv.cpp',
+				'#include <iostream>',
+				'int main(){',
+				'std::cout << __cplusplus;',
+				'return 0;',
+				'}',
+			);
+
+			const d = new Distribution(make, {
+				name: 'test',
+				version: '1.2.3',
+				cxxStd: 17,
+			});
+
+			const t = d.addExecutable({
+				name: 'printv',
+				src: ['src/printv.cpp'],
+			});
+
+			await expectOutput(t.binary, '201703');
+		});
+
+		it('can specify c++20', async () => {
+			await writePath(
+				'src/printv.cpp',
+				'#include <iostream>',
+				'int main(){',
+				'std::cout << __cplusplus;',
+				'return 0;',
+				'}',
+			);
+
+			const d = new Distribution(make, {
+				name: 'test',
+				version: '1.2.3',
+				cxxStd: 20,
+			});
+
+			const t = d.addExecutable({
+				name: 'printv',
+				src: ['src/printv.cpp'],
+			});
+
+			await expectOutput(t.binary, '202002');
+		});
+
 		it('includes the "include" dir by default', async () => {
 			await writePath('include/val.h', '#define VAL 4');
 

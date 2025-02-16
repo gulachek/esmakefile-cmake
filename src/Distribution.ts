@@ -3,6 +3,7 @@ import { ICompiler } from './Compiler.js';
 import { GccCompiler } from './GccCompiler.js';
 import { MsvcCompiler } from './MsvcCompiler.js';
 import { Executable, IExecutable } from './Executable.js';
+import { CStandard, CxxStandard } from './Source.js';
 import {
 	ILibrary,
 	Library,
@@ -20,6 +21,8 @@ import { resolve } from 'node:path';
 export interface IDistributionOpts {
 	name: string;
 	version: string;
+	cStd?: CStandard;
+	cxxStd?: CxxStandard;
 }
 
 export interface IAddExecutableOpts {
@@ -55,6 +58,8 @@ export class Distribution {
 	readonly outDir: IBuildPath;
 	readonly dist: IBuildPath;
 	readonly test: IBuildPath;
+	readonly cStd?: CStandard;
+	readonly cxxStd?: CxxStandard;
 
 	private _executables: IExecutable[] = [];
 	private _libraries: ILibrary[] = [];
@@ -71,6 +76,8 @@ export class Distribution {
 		this.outDir = Path.build(this.name);
 		this.dist = Path.build(`${this.name}-${this.version}.tgz`);
 		this.test = Path.build(`test-${this.name}`);
+		this.cStd = opts.cStd;
+		this.cxxStd = opts.cxxStd;
 
 		this._pkg = new PkgConfig({
 			// TODO - relative to cwd or srcdir or what?
@@ -80,7 +87,7 @@ export class Distribution {
 		if (platform() === 'win32') {
 			this._compiler = new MsvcCompiler(make);
 		} else {
-			this._compiler = new GccCompiler(make, this._pkg);
+			this._compiler = new GccCompiler(make, this._pkg, this.cStd, this.cxxStd);
 		}
 
 		this._parseConfig();
@@ -133,6 +140,7 @@ export class Distribution {
 			includeDirs,
 			linkTo: [],
 			type: this._resolveLibraryType(opts.type || LibraryType.default),
+			pkgs: [],
 		};
 
 		this._libraries.push(lib);
