@@ -117,7 +117,9 @@ export class GccCompiler implements ICompiler {
 			}
 
 			// TODO - dynamic linking too
-			const { flags: pkgLibs } = await this._pkg.staticLibs(pkgNames);
+			const { flags: pkgLibs } = await this._pkg.libs(pkgNames, {
+				static: true,
+			});
 
 			const objsAbs = args.absAll(...objs);
 			return args.spawn(cc, [
