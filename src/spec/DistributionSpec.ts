@@ -120,7 +120,7 @@ describe('Distribution', function () {
 		await mkdir(stageDir);
 		await run('cmake', ['-B', stageDir, '-S', join(testDir, 'test-1.2.3')]);
 		// Specify config b.c. default for MS is Debug for --build and Release for --install
-		await run('cmake', ['--build', stageDir /*'--config', 'Release'*/]);
+		await run('cmake', ['--build', stageDir, '--config', 'Release']);
 		await run('cmake', [
 			'--install',
 			stageDir,
