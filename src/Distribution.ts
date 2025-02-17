@@ -1,5 +1,5 @@
 import { Makefile, PathLike, Path, IBuildPath } from 'esmakefile';
-import { ICompiler } from './Compiler.js';
+import { ICompiler, ICompilerArgs } from './Compiler.js';
 import { GccCompiler } from './GccCompiler.js';
 import { MsvcCompiler } from './MsvcCompiler.js';
 import { Executable, IExecutable } from './Executable.js';
@@ -85,10 +85,17 @@ export class Distribution {
 			searchPaths: [resolve('vendor/lib/pkgconfig')],
 		});
 
+		const compilerArgs: ICompilerArgs = {
+			make,
+			pkg: this._pkg,
+			cStd: this.cStd,
+			cxxStd: this.cxxStd
+		};
+
 		if (platform() === 'win32') {
-			this._compiler = new MsvcCompiler(make);
+			this._compiler = new MsvcCompiler(compilerArgs);
 		} else {
-			this._compiler = new GccCompiler(make, this._pkg, this.cStd, this.cxxStd);
+			this._compiler = new GccCompiler(compilerArgs);
 		}
 
 		this._parseConfig();

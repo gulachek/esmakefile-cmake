@@ -1,5 +1,5 @@
 import { platform } from 'node:os';
-import { ICompiler } from './Compiler.js';
+import { ICompiler, ICompilerArgs } from './Compiler.js';
 import { Executable, IExecutable } from './Executable.js';
 import {
 	ILibrary,
@@ -25,18 +25,15 @@ export class GccCompiler implements ICompiler {
 	private _cxxStd?: CxxStandard;
 
 	constructor(
-		make: Makefile,
-		pkg: PkgConfig,
-		cStd?: CStandard,
-		cxxStd?: CxxStandard,
+			args: ICompilerArgs
 	) {
-		this.make = make;
+		this.make = args.make;
 		this.cc = 'cc';
 		this.cxx = 'c++';
 		this.ar = 'ar';
-		this._pkg = pkg;
-		this._cStd = cStd;
-		this._cxxStd = cxxStd;
+		this._pkg = args.pkg;
+		this._cStd = args.cStd;
+		this._cxxStd = args.cxxStd;
 
 		if (platform() === 'darwin') {
 			this._dylibExt = '.dylib';

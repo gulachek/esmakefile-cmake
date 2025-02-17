@@ -229,7 +229,7 @@ describe('Distribution', function () {
 				'src/printv.c',
 				'#include <stdio.h>',
 				'int main(){',
-				'printf("%d", __STDC_VERSION__);',
+				'printf("%ld", __STDC_VERSION__);',
 				'return 0;',
 				'}',
 			);
@@ -253,7 +253,7 @@ describe('Distribution', function () {
 				'src/printv.c',
 				'#include <stdio.h>',
 				'int main(){',
-				'printf("%d", __STDC_VERSION__);',
+				'printf("%ld", __STDC_VERSION__);',
 				'return 0;',
 				'}',
 			);
@@ -276,8 +276,9 @@ describe('Distribution', function () {
 			await writePath(
 				'src/printv.cpp',
 				'#include <cstdio>',
+				...cxxLangMacro,
 				'int main(){',
-				'std::printf("%d", __cplusplus);',
+				'std::printf("%ld", CXXLANG);',
 				'return 0;',
 				'}',
 			);
@@ -300,8 +301,9 @@ describe('Distribution', function () {
 			await writePath(
 				'src/printv.cpp',
 				'#include <cstdio>',
+				...cxxLangMacro,
 				'int main(){',
-				'std::printf("%d", __cplusplus);',
+				'std::printf("%ld", CXXLANG);',
 				'return 0;',
 				'}',
 			);
@@ -739,13 +741,14 @@ describe('Distribution', function () {
 			await writePath(
 				'src/printv.c',
 				'#include <stdio.h>',
-				'int main(){ printf("%d", __STDC_VERSION__); return 0; }',
+				'int main(){ printf("%ld", __STDC_VERSION__); return 0; }',
 			);
 
 			await writePath(
 				'src/printvxx.cpp',
 				'#include <cstdio>',
-				'int main(){ std::printf("%d", __cplusplus); return 0; }',
+				...cxxLangMacro,
+				'int main(){ std::printf("%ld", CXXLANG); return 0; }',
 			);
 
 			await writePath('include/add.h', 'int add(int a, int b);');
@@ -868,3 +871,12 @@ describe('Distribution', function () {
 	// custom compiler
 	// custom cflags
 });
+
+/** Defines CXXLANG macro from __cplusplus or _MSVC_LANG */
+const cxxLangMacro = [
+	'#ifdef _MSVC_LANG',
+	'#define CXXLANG _MSVC_LANG',
+	'#else',
+	'#define CXXLANG __cplusplus',
+	'#endif'
+];
