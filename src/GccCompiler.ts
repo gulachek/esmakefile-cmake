@@ -46,7 +46,7 @@ export class GccCompiler implements ICompiler {
 		}
 	}
 
-	private _compile(c: ILinkedCompilation): IBuildPath[] {
+	private _compile(c: ILinkedCompilation, fPIC: boolean): IBuildPath[] {
 		const includeFlags = allIncludes(c).map((i) => {
 			return `-I${this.make.abs(i)}`;
 		});
@@ -62,6 +62,7 @@ export class GccCompiler implements ICompiler {
 
 			this.make.add(obj, [s], async (args) => {
 				const flags = ['-c'];
+				if (fPIC) flags.push('-fPIC');
 
 				let cc: string;
 				if (isCxxSrc(s)) {
@@ -88,7 +89,7 @@ export class GccCompiler implements ICompiler {
 	}
 
 	public addExecutable(exe: IExecutable): Executable {
-		const objs = this._compile(exe);
+		const objs = this._compile(exe, false);
 
 		const e = new Executable(exe.name, exe.outDir.join(exe.name));
 
@@ -135,7 +136,7 @@ export class GccCompiler implements ICompiler {
 	}
 
 	public addLibrary(lib: ILibrary): Library {
-		const objs = this._compile(lib);
+		const objs = this._compile(lib, true);
 
 		if (lib.type === ResolvedLibraryType.static) {
 			const path = lib.outDir.join(`lib${lib.name}.a`);
