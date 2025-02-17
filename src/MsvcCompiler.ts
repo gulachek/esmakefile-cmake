@@ -10,6 +10,7 @@ import {
 } from './Library.js';
 import { CStandard, CxxStandard, isCxxSrc } from './Source.js';
 import { Makefile, Path, IBuildPath } from 'esmakefile';
+import { PkgConfig } from 'espkg-config';
 
 export class MsvcCompiler implements ICompiler {
 	private make: Makefile;
@@ -17,11 +18,13 @@ export class MsvcCompiler implements ICompiler {
 	private lib: string;
 	private _cStd?: CStandard;
 	private _cxxStd?: CxxStandard;
+	private _pkg: PkgConfig;
 
 	constructor(args: ICompilerArgs) {
 		this.make = args.make;
 		this._cStd = args.cStd;
 		this._cxxStd = args.cxxStd;
+		this._pkg = args.pkg;
 		this.cc = 'cl.exe';
 		this.lib = 'lib.exe';
 	}
@@ -34,11 +37,14 @@ export class MsvcCompiler implements ICompiler {
 
 		const objs: IBuildPath[] = [];
 
+		// TODO transitive deps
+		const pkgNames = c.pkgs.map((p) => p.name);
+
 		for (const s of c.src) {
 			const obj = Path.gen(s, { ext: '.obj' });
 			objs.push(obj);
 
-			this.make.add(obj, [s], (args) => {
+			this.make.add(obj, [s], async (args) => {
 				const flags = ['/nologo', '/c'];
 				if (isCxxSrc(s)) {
 					if (this._cxxStd) flags.push(`/std:c++${this._cxxStd}`);
@@ -46,8 +52,11 @@ export class MsvcCompiler implements ICompiler {
 					if (this._cStd) flags.push(`/std:c${this._cStd}`);
 				}
 
+				const { flags: pkgCflags } = await this._pkg.cflags(pkgNames);
+
 				return args.spawn(this.cc, [
 					...flags,
+					...pkgCflags,
 					...includeFlags,
 					`/Fo${args.abs(obj)}`,
 					args.abs(s),
@@ -62,6 +71,8 @@ export class MsvcCompiler implements ICompiler {
 		const objs = this._compile(exe);
 		const e = new Executable(exe.name, exe.outDir.join(exe.name + '.exe'));
 
+		const pkgNames = exe.pkgs.map(p => p.name);
+
 		const linkFlags: string[] = [];
 		const libDeps = [];
 		if (exe.linkTo.length > 0) {
@@ -72,13 +83,18 @@ export class MsvcCompiler implements ICompiler {
 			}
 		}
 
-		this.make.add(e.binary, [...libDeps, ...objs], (args) => {
+		this.make.add(e.binary, [...libDeps, ...objs], async (args) => {
 			const objsAbs = args.absAll(...objs);
+
+			// TODO - dynamic linking too
+			const { flags: pkgLibs } = await this._pkg.libs(pkgNames, { static: true });
+
 			return args.spawn(this.cc, [
 				'/nologo',
 				`/Fe${args.abs(e.binary)}`,
 				...linkFlags,
 				...objsAbs,
+				...pkgLibs
 			]);
 		});
 

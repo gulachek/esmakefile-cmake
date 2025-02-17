@@ -455,12 +455,12 @@ describe('Distribution', function () {
 			let cflags = `-I${depInclude}`;
 			let libs = `-L${libDir} -ladd`;
 			if (platform() === 'win32') {
-				cflags = `/I${depInclude}`;
-				libs = make.abs(add.binary);
+				cflags = `/I${depInclude.replace(/\\/g, '\\\\')}`;
+				libs = make.abs(add.binary).replace(/\\/g, '\\\\');
 			}
 
 			await writePath(
-				'vendor/lib/pkgconfig/add.pc',
+				 'vendor/lib/pkgconfig/add.pc',
 				'Name: add',
 				'Version: 2.3.4',
 				'Description: add two integers',
