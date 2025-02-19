@@ -126,8 +126,6 @@ describe('Distribution', function () {
 			stageDir,
 			'--prefix',
 			join(testDir, 'vendor'),
-			//'--config',
-			//'Release',
 		]);
 	}
 
@@ -460,7 +458,7 @@ describe('Distribution', function () {
 			}
 
 			await writePath(
-				 'vendor/lib/pkgconfig/add.pc',
+				'vendor/lib/pkgconfig/add.pc',
 				'Name: add',
 				'Version: 2.3.4',
 				'Description: add two integers',
@@ -858,18 +856,6 @@ describe('Distribution', function () {
 			expectOutput(join(buildDir, 'print'), '2+2=4');
 		});
 	});
-
-	// TODO
-	// custom include dirs
-	// addLibrary
-	// header only library
-	// distribution
-	// installing distribution
-	// linking to library
-	// pkgConfig
-	// compile_commands.json
-	// custom compiler
-	// custom cflags
 });
 
 /** Defines CXXLANG macro from __cplusplus or _MSVC_LANG */
@@ -878,5 +864,5 @@ const cxxLangMacro = [
 	'#define CXXLANG _MSVC_LANG',
 	'#else',
 	'#define CXXLANG __cplusplus',
-	'#endif'
+	'#endif',
 ];
