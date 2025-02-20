@@ -127,11 +127,14 @@ export class Distribution {
 			pkgs,
 		};
 
+		const out = this._compiler.addExecutable(exe);
+
 		if (!devOnly) {
 			this._executables.push(exe);
+			this.make.add(this.dist, [out.binary]);
 		}
 
-		return this._compiler.addExecutable(exe);
+		return out;
 	}
 
 	addExecutable(opts: IAddExecutableOpts): Executable {
@@ -174,7 +177,9 @@ export class Distribution {
 
 		this._libraries.push(lib);
 
-		return this._compiler.addLibrary(lib);
+		const out = this._compiler.addLibrary(lib);
+		this.make.add(this.dist, [out.binary]);
+		return out;
 	}
 
 	install(target: Executable | Library): void {

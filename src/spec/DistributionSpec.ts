@@ -760,6 +760,18 @@ describe('Distribution', function () {
 
 			await writePath('src/unit_test.c', 'int main() { return 0; }');
 
+			const genC = Path.build('gen.c');
+			make.add(genC, async () => {
+				await writePath(
+					genC,
+					'#include <stdio.h>',
+					'int main() {',
+					'printf("generated!");',
+					'return 0;',
+					'}',
+				);
+			});
+
 			const d = new Distribution(make, {
 				name: 'test',
 				version: '1.2.3',
@@ -789,10 +801,16 @@ describe('Distribution', function () {
 				src: ['src/unit_test.c'],
 			});
 
+			const gen = d.addExecutable({
+				name: 'gen',
+				src: [genC],
+			});
+
 			// TODO - install multiple in same call
 			d.install(printv);
 			d.install(printvxx);
 			d.install(add);
+			d.install(gen);
 
 			await install(d);
 		});
@@ -805,6 +823,10 @@ describe('Distribution', function () {
 		it('installs an executable', async () => {
 			await expectOutput('vendor/bin/printv', '201112');
 			await expectOutput('vendor/bin/printv++', '202002');
+		});
+
+		it('can install a target with generated source', async () => {
+			await expectOutput('vendor/bin/gen', 'generated!');
 		});
 
 		it('does not install a test', () => {
