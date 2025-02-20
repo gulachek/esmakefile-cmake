@@ -8,6 +8,7 @@ import {
 	BuildPathLike,
 } from 'esmakefile';
 import { mkdir, rm, writeFile } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { platform } from 'node:os';
 import { spawnSync, SpawnSyncOptions } from 'node:child_process';
@@ -723,6 +724,7 @@ describe('Distribution', function () {
 
 	describe('installation', () => {
 		let oldDir: string = '';
+		let distArchive: Path;
 
 		before(async () => {
 			make = new Makefile({
@@ -756,12 +758,16 @@ describe('Distribution', function () {
 				'int add(int a, int b) { return a + b; }',
 			);
 
+			await writePath('src/unit_test.c', 'int main() { return 0; }');
+
 			const d = new Distribution(make, {
 				name: 'test',
 				version: '1.2.3',
 				cStd: 11,
 				cxxStd: 20,
 			});
+
+			distArchive = d.dist;
 
 			const printv = d.addExecutable({
 				name: 'printv',
@@ -776,6 +782,11 @@ describe('Distribution', function () {
 			const add = d.addLibrary({
 				name: 'add',
 				src: ['src/add.c'],
+			});
+
+			d.addTest({
+				name: 'unit_test',
+				src: ['src/unit_test.c'],
 			});
 
 			// TODO - install multiple in same call
@@ -794,6 +805,24 @@ describe('Distribution', function () {
 		it('installs an executable', async () => {
 			await expectOutput('vendor/bin/printv', '201112');
 			await expectOutput('vendor/bin/printv++', '202002');
+		});
+
+		it('does not install a test', () => {
+			// just to make sure we're in right cwd
+			expect(existsSync('vendor/bin/printv')).to.be.true;
+
+			expect(existsSync('vendor/bin/unit_test')).to.be.false;
+		});
+
+		it('does not copy test source to distribution', () => {
+			// just to make sure we're in right cwd
+			const result = spawnSync('tar', ['tfz', make.abs(distArchive)], {
+				encoding: 'utf8',
+			});
+
+			const output = result.output.join('');
+			expect(output).to.contain('src/printv.c'); // for good measure
+			expect(output).not.to.contain('src/unit_test.c');
 		});
 
 		it('installs a library w/ pkgconfig', async () => {

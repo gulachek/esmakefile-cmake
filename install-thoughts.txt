@@ -1,0 +1,42 @@
+Why use libexec for Win32? Don't have same global FHS as
+POSIX systems.
+
+Not going to target libexec right away anyway.
+
+bin exe -> lib .so / bin .dll OK
+bin exe -> NI .so / .dll NOT OK (not found)
+
+bin exe -> lib .a / lib .lib OK
+bin exe -> NI .a / .lib OK
+
+NI exe: Why in distribution? Pointless. Should be excluded. Test / dev only
+
+lib .so / bin .dll -> lib .so / bin .dll OK
+lib .so / bin .dll -> NI .so / .dll NOT OK (not found)
+
+lib .so / bin .dll -> lib .a / lib .lib OK
+lib .so / bin .dll -> NI .a / .lib OK
+
+NI .so / .dll ? Useless?
+
+lib .a / lib .lib -> lib .so / bin .dll NOT OK (loading dll)
+lib .a / lib .lib -> NI .so / .dll NOT OK
+
+lib.a / lib .lib -> lib .a / lib .lib OK
+lib.a / lib .lib -> NI .a / .lib NOT OK (can't fully link)
+
+NI .a .lib -> lib .so / bin .dll OK? (presumably same dist)
+NI .a .lib -> NI .so / .dll NOT OK (can't link)
+
+NI .a .lib -> lib .a .lib OK
+NI .a .lib -> NI .a .lib OK (if original NI ok, so is this)
+
+Issues to watch out for:
+1. NI default (might be configured dynamic & useless)
+2. NI dynamic (useless)
+3. NI exes (useless)
+4. I default -> dynamic (static can link into separate image, load issue win32. Need example)
+4. I static -> default (see above)
+4. I static -> dynamic (see above)
+5. I default -> NI (static) (incomplete link)
+5. I static -> NI (static) (incomplete link)

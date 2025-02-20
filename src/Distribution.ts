@@ -34,7 +34,6 @@ export interface IAddExecutableOpts {
 export interface IAddTestOpts extends IAddExecutableOpts {}
 
 export interface ITest {
-	exe: Executable;
 	run: IBuildPath;
 }
 
@@ -89,7 +88,7 @@ export class Distribution {
 			make,
 			pkg: this._pkg,
 			cStd: this.cStd,
-			cxxStd: this.cxxStd
+			cxxStd: this.cxxStd,
 		};
 
 		if (platform() === 'win32') {
@@ -102,7 +101,10 @@ export class Distribution {
 		this._addDist();
 	}
 
-	addExecutable(opts: IAddExecutableOpts): Executable {
+	private _addExecutable(
+		opts: IAddExecutableOpts,
+		devOnly: boolean,
+	): Executable {
 		// TODO validate opts
 		const linkTo: Library[] = [];
 		const pkgs: IImportedLibrary[] = [];
@@ -125,9 +127,28 @@ export class Distribution {
 			pkgs,
 		};
 
-		this._executables.push(exe);
+		if (!devOnly) {
+			this._executables.push(exe);
+		}
 
 		return this._compiler.addExecutable(exe);
+	}
+
+	addExecutable(opts: IAddExecutableOpts): Executable {
+		return this._addExecutable(opts, false);
+	}
+
+	addTest(opts: IAddTestOpts): ITest {
+		const exe = this._addExecutable(opts, true);
+
+		const run = Path.gen(exe.binary, { ext: '.run' });
+		this.make.add(run, [exe.binary], (args) => {
+			return args.spawn(args.abs(exe.binary), []);
+		});
+
+		this.make.add(this.test, [run]);
+
+		return { run };
 	}
 
 	addLibrary(opts: IAddLibraryOpts): Library {
@@ -163,20 +184,6 @@ export class Distribution {
 	findPackage(name: string): IImportedLibrary {
 		this._importedLibNames.push(name);
 		return { name };
-	}
-
-	// TODO - exclude from distribution
-	addTest(opts: IAddTestOpts): ITest {
-		const exe = this.addExecutable(opts);
-
-		const run = Path.gen(exe.binary, { ext: '.run' });
-		this.make.add(run, [exe.binary], (args) => {
-			return args.spawn(args.abs(exe.binary), []);
-		});
-
-		this.make.add(this.test, [run]);
-
-		return { exe, run };
 	}
 
 	private _resolveLibraryType(type: LibraryType): ResolvedLibraryType {
@@ -381,7 +388,7 @@ export class Distribution {
 					`\tinstall(FILES pkgconfig/${pcFile.basename}`,
 					'\t\tDESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig"',
 					'\t)',
-					'endif()'
+					'endif()',
 				);
 
 				const targetName = `${lib.name}-targets`;
