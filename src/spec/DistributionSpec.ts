@@ -738,6 +738,8 @@ describe('Distribution', function () {
 			oldDir = cwd();
 			chdir(testDir);
 
+			await writePath('LICENSE.txt', 'This is a test license!');
+
 			await writePath(
 				'src/printv.c',
 				'#include <stdio.h>',
@@ -836,15 +838,17 @@ describe('Distribution', function () {
 			expect(existsSync('vendor/bin/unit_test')).to.be.false;
 		});
 
-		it('does not copy test source to distribution', () => {
+		it('copies expected files to distribution', () => {
 			// just to make sure we're in right cwd
 			const result = spawnSync('tar', ['tfz', make.abs(distArchive)], {
 				encoding: 'utf8',
 			});
 
-			const output = result.output.join('');
-			expect(output).to.contain('src/printv.c'); // for good measure
-			expect(output).not.to.contain('src/unit_test.c');
+			const p = 'test-1.2.3';
+			const output = result.output.join('').split(/\r?\n/);
+			expect(output).to.contain(`${p}/LICENSE.txt`); // license
+			expect(output).to.contain(`${p}/src/printv.c`); // src
+			expect(output).not.to.contain(`${p}/src/unit_test.c`); // test
 		});
 
 		it('installs a library w/ pkgconfig', async () => {
