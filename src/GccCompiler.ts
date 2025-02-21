@@ -12,6 +12,7 @@ import {
 import { Makefile, Path, IBuildPath } from 'esmakefile';
 import { PkgConfig } from 'espkg-config';
 import { isCxxSrc, isCxxLink, CStandard, CxxStandard } from './Source.js';
+import { writeFile } from 'node:fs/promises';
 
 export class GccCompiler implements ICompiler {
 	private make: Makefile;
@@ -24,9 +25,7 @@ export class GccCompiler implements ICompiler {
 	private _cStd?: CStandard;
 	private _cxxStd?: CxxStandard;
 
-	constructor(
-			args: ICompilerArgs
-	) {
+	constructor(args: ICompilerArgs) {
 		this.make = args.make;
 		this.cc = 'cc';
 		this.cxx = 'c++';
@@ -88,6 +87,15 @@ export class GccCompiler implements ICompiler {
 	public addExecutable(exe: IExecutable): Executable {
 		const objs = this._compile(exe, false);
 
+		/*
+		 * Name: exe.name
+		 * Version:
+		 * Description:
+		 * Cflags: ...-IincludeDir
+		 * Libs: ?
+		 * Requires.private: ...imports/linkTo
+		 */
+
 		const e = new Executable(exe.name, exe.outDir.join(exe.name));
 
 		const linkFlags: string[] = [];
@@ -133,6 +141,42 @@ export class GccCompiler implements ICompiler {
 	}
 
 	public addLibrary(lib: ILibrary): Library {
+		const pcReqs: string[] = [];
+		const pcDeps: Path[] = [];
+		for (const l of lib.linkTo) {
+			pcReqs.push(l.name);
+			pcDeps.push(Path.build(`pkgconfig/${l.name}.pc`));
+		}
+
+		for (const p of lib.pkgs) {
+			pcReqs.push(p.name);
+		}
+
+		// TODO - Distribution-specific pkgconfig dir?
+		const pcFile = Path.build(`pkgconfig/${lib.name}.pc`);
+
+		this.make.add(pcFile, async (args) => {
+			const contents: string[] = [
+				`Name: ${lib.name}`,
+				'Version:',
+				'Description:',
+			];
+
+			const cflags = lib.includeDirs.map((p) => `-I${args.abs(p)}`);
+			contents.push(`Cflags: ${cflags.join(' ')}`);
+
+			const libs = `-L${args.abs(lib.outDir)} -l${lib.name}`;
+			contents.push(`Libs: ${libs}`);
+
+			if (lib.type === ResolvedLibraryType.dynamic) {
+				contents.push(`Requires.private: ${pcReqs}`);
+			} else {
+				contents.push(`Requires: ${pcReqs}`);
+			}
+
+			await writeFile(args.abs(pcFile), contents.join('\n'), 'utf8');
+		});
+
 		const objs = this._compile(lib, true);
 
 		if (lib.type === ResolvedLibraryType.static) {
@@ -148,13 +192,17 @@ export class GccCompiler implements ICompiler {
 			const path = lib.outDir.join(`lib${lib.name}${this._dylibExt}`);
 			const l = makeLibrary(lib, path);
 
-			this.make.add(path, objs, (args) => {
+			this.make.add(path, [...objs, ...pcDeps], async (args) => {
 				const objsAbs = args.absAll(...objs);
+
+				const { flags: pkgLibs } = await this._pkg.libs(pcReqs);
+
 				return args.spawn(this.cc, [
 					'-shared',
 					'-o',
 					args.abs(path),
 					...objsAbs,
+					...pkgLibs,
 				]);
 			});
 			return l;

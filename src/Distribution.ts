@@ -29,6 +29,7 @@ export interface IDistributionOpts {
 export interface IAddExecutableOpts {
 	name: string;
 	src: PathLike[];
+	includeDirs?: PathLike[];
 	linkTo?: (Library | IImportedLibrary)[];
 }
 
@@ -44,10 +45,7 @@ export enum LibraryType {
 	dynamic = 'dynamic',
 }
 
-export interface IAddLibraryOpts {
-	name: string;
-	src: PathLike[];
-	includeDirs?: PathLike[];
+export interface IAddLibraryOpts extends IAddExecutableOpts {
 	type?: LibraryType;
 }
 
@@ -116,11 +114,16 @@ export class Distribution {
 		}
 	}
 
-	private _addExecutable(
-		opts: IAddExecutableOpts,
-		devOnly: boolean,
-	): Executable {
-		// TODO validate opts
+	private _createLinkedComp(opts: IAddExecutableOpts): ILinkedCompilation {
+		const includeDirs: Path[] = [];
+		if (opts.includeDirs) {
+			for (const i of opts.includeDirs) {
+				includeDirs.push(Path.src(i));
+			}
+		} else {
+			includeDirs.push(Path.src('include'));
+		}
+
 		const linkTo: Library[] = [];
 		const pkgs: IImportedLibrary[] = [];
 		if (opts.linkTo) {
@@ -133,14 +136,22 @@ export class Distribution {
 			}
 		}
 
-		const exe: IExecutable = {
+		return {
 			name: opts.name,
 			outDir: this.outDir,
 			src: opts.src.map((s) => Path.src(s)),
-			includeDirs: [Path.src('include')],
+			includeDirs,
 			linkTo,
 			pkgs,
 		};
+	}
+
+	private _addExecutable(
+		opts: IAddExecutableOpts,
+		devOnly: boolean,
+	): Executable {
+		// TODO validate opts
+		const exe = this._createLinkedComp(opts);
 
 		const out = this._compiler.addExecutable(exe);
 
@@ -183,23 +194,9 @@ export class Distribution {
 
 	addLibrary(opts: IAddLibraryOpts): Library {
 		// TODO validate opts
-		const includeDirs: Path[] = [];
-		if (opts.includeDirs) {
-			for (const i of opts.includeDirs) {
-				includeDirs.push(Path.src(i));
-			}
-		} else {
-			includeDirs.push(Path.src('include'));
-		}
-
 		const lib: ILibrary = {
-			name: opts.name,
-			outDir: this.outDir,
-			src: opts.src.map((s) => Path.src(s)),
-			includeDirs,
-			linkTo: [],
+			...this._createLinkedComp(opts),
 			type: this._resolveLibraryType(opts.type || LibraryType.default),
-			pkgs: [],
 		};
 
 		this._libraries.push(lib);
