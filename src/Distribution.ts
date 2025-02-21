@@ -66,7 +66,6 @@ export class Distribution {
 	private _executables: IExecutable[] = [];
 	private _libraries: ILibrary[] = [];
 	private _installedTargets: string[] = [];
-	private _importedLibNames: string[] = [];
 
 	private _compiler: ICompiler;
 	private _defaultLibraryType: ResolvedLibraryType = ResolvedLibraryType.static;
@@ -216,7 +215,6 @@ export class Distribution {
 	}
 
 	findPackage(name: string): IImportedLibrary {
-		this._importedLibNames.push(name);
 		return { name };
 	}
 
@@ -285,7 +283,28 @@ export class Distribution {
 				await copyFile(args.abs(src), absDest);
 			}
 
-			for (const pkgName of this._importedLibNames) {
+			const targets: ILinkedCompilation[] = [
+				...this._executables,
+				...this._libraries,
+			];
+
+			const pkgNames = new Set<string>();
+
+			for (const c of targets) {
+				for (const p of c.pkgs) {
+					pkgNames.add(p.name);
+				}
+
+				// Copy all includes into dist/include
+				for (const i of c.includeDirs) {
+					const dest = dir.join('include');
+					args.logStream.write(`Copy ${i} -> ${dest}\n`);
+					await cp(args.abs(i), args.abs(dest), { recursive: true });
+					args.logStream.write(`(done) Copy ${i} -> ${dest}\n`);
+				}
+			}
+
+			for (const pkgName of pkgNames) {
 				cmake.push(`find_package(${pkgName} REQUIRED)`);
 			}
 
@@ -314,18 +333,13 @@ export class Distribution {
 				}
 				cmake.push(')');
 
-				// Copy all includes into dist/include
-				for (const i of exe.includeDirs) {
-					const dest = dir.join('include');
-					args.logStream.write(`Copy ${i} -> ${dest}\n`);
-					await cp(args.abs(i), args.abs(dest), { recursive: true });
-					args.logStream.write(`(done) Copy ${i} -> ${dest}\n`);
+				if (exe.includeDirs.length > 0) {
+					cmake.push(`target_include_directories(${exe.name} PRIVATE include)`);
 				}
 
-				if (exe.includeDirs.length > 0) {
-					cmake.push(
-						`\ntarget_include_directories(${exe.name} PRIVATE include)`,
-					);
+				// TODO do this for libs too
+				for (const p of exe.pkgs) {
+					cmake.push(`target_link_libraries(${exe.name} PRIVATE ${p.name})`);
 				}
 
 				cmake.push(`install(TARGETS ${exe.name})`);
@@ -350,14 +364,6 @@ export class Distribution {
 					cmake.push(`\t${s.rel()}`);
 				}
 				cmake.push(')');
-
-				// Copy all includes into dist/include
-				for (const i of lib.includeDirs) {
-					const dest = dir.join('include');
-					args.logStream.write(`Copy ${i} -> ${dest}\n`);
-					await cp(args.abs(i), args.abs(dest), { recursive: true });
-					args.logStream.write(`(done) Copy ${i} -> ${dest}\n`);
-				}
 
 				if (lib.includeDirs.length > 0) {
 					cmake.push(

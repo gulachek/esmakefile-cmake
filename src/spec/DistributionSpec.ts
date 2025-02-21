@@ -19,6 +19,9 @@ const srcDir = join(testDir, 'src');
 const buildDir = join(testDir, 'build');
 const stageDir = join(testDir, 'stage');
 const includeDir = join(testDir, 'include');
+const vendorDir = join(testDir, 'vendor');
+const cmakeDir = join(vendorDir, 'lib', 'cmake');
+const pkgconfigDir = join(vendorDir, 'lib', 'pkgconfig');
 
 async function updateTarget(
 	make: Makefile,
@@ -119,15 +122,16 @@ describe('Distribution', function () {
 		});
 
 		await mkdir(stageDir);
-		await run('cmake', ['-B', stageDir, '-S', join(testDir, 'test-1.2.3')]);
+		await run('cmake', [
+			'-B',
+			stageDir,
+			'-S',
+			join(testDir, 'test-1.2.3'),
+			`-DCMAKE_PREFIX_PATH=${vendorDir}`,
+		]);
 		// Specify config b.c. default for MS is Debug for --build and Release for --install
 		await run('cmake', ['--build', stageDir, '--config', 'Release']);
-		await run('cmake', [
-			'--install',
-			stageDir,
-			'--prefix',
-			join(testDir, 'vendor'),
-		]);
+		await run('cmake', ['--install', stageDir, '--prefix', vendorDir]);
 	}
 
 	describe('development', () => {
@@ -424,9 +428,7 @@ describe('Distribution', function () {
 			// generation of installed pkgconfig in installation tests
 			await mkdir(join(testDir, 'dep', 'include'), { recursive: true });
 			await mkdir(join(testDir, 'dep', 'src'));
-			await mkdir(join(testDir, 'vendor', 'lib', 'pkgconfig'), {
-				recursive: true,
-			});
+			await mkdir(pkgconfigDir, { recursive: true });
 
 			const dep = new Distribution(make, {
 				name: 'dep',
@@ -734,11 +736,30 @@ describe('Distribution', function () {
 
 			await mkdir(includeDir, { recursive: true });
 			await mkdir(srcDir, { recursive: true });
+			await mkdir(pkgconfigDir, { recursive: true });
+			await mkdir(cmakeDir, { recursive: true });
 
 			oldDir = cwd();
 			chdir(testDir);
 
 			await writePath('LICENSE.txt', 'This is a test license!');
+
+			// add a silly package in pkg-config and cmake that
+			// defines ZERO
+			await writePath(
+				'vendor/lib/pkgconfig/zero.pc',
+				'Name: zero',
+				'Version: 0',
+				'Description: nada',
+				'Cflags: -DZERO=0',
+			);
+
+			await mkdir(join(cmakeDir, 'zero'));
+			await writePath(
+				'vendor/lib/cmake/zero/zero-config.cmake',
+				'add_library(zero INTERFACE)',
+				'target_compile_definitions(zero INTERFACE ZERO=0)',
+			);
 
 			await writePath(
 				'src/printv.c',
@@ -769,7 +790,7 @@ describe('Distribution', function () {
 					'#include <stdio.h>',
 					'int main() {',
 					'printf("generated!");',
-					'return 0;',
+					'return ZERO;',
 					'}',
 				);
 			});
@@ -782,6 +803,9 @@ describe('Distribution', function () {
 			});
 
 			distArchive = d.dist;
+
+			const notFound = d.findPackage('not-found');
+			const zero = d.findPackage('zero');
 
 			const printv = d.addExecutable({
 				name: 'printv',
@@ -801,11 +825,13 @@ describe('Distribution', function () {
 			d.addTest({
 				name: 'unit_test',
 				src: ['src/unit_test.c'],
+				linkTo: [notFound],
 			});
 
 			const gen = d.addExecutable({
 				name: 'gen',
 				src: [genC],
+				linkTo: [zero],
 			});
 
 			// TODO - install multiple in same call
@@ -905,7 +931,7 @@ describe('Distribution', function () {
 				testDir,
 				'-B',
 				buildDir,
-				`-DCMAKE_PREFIX_PATH=${join(testDir, 'vendor')}`,
+				`-DCMAKE_PREFIX_PATH=${vendorDir}`,
 			]);
 			await run('cmake', ['--build', buildDir]);
 			expectOutput(join(buildDir, 'print'), '2+2=4');
