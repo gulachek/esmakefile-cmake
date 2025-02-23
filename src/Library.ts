@@ -9,10 +9,33 @@ export interface ILinkedCompilation {
 	pkgs: IImportedLibrary[];
 }
 
+function transitiveLibs(c: ILinkedCompilation): Library[] {
+	const libs: Library[] = [];
+	for (const l of c.linkTo) {
+		for (const t of libTransitiveLibs(l)) {
+			libs.push(t);
+		}
+	}
+
+	return libs;
+}
+
+function libTransitiveLibs(l: Library): Library[] {
+	const libs: Library[] = [];
+	for (const dep of l.linkedLibraries()) {
+		for (const t of libTransitiveLibs(dep)) {
+			libs.push(t);
+		}
+	}
+
+	libs.push(l);
+	return libs;
+}
+
 export function allIncludes(c: ILinkedCompilation): Path[] {
 	const includes: Path[] = [];
-	for (const l of c.linkTo) {
-		for (const i of allLibraryIncludes(l)) {
+	for (const l of transitiveLibs(c)) {
+		for (const i of l.includes()) {
 			includes.push(i);
 		}
 	}
@@ -24,41 +47,11 @@ export function allIncludes(c: ILinkedCompilation): Path[] {
 	return includes;
 }
 
-function allLibraryIncludes(l: Library): Path[] {
-	const includes: Path[] = [];
-	for (const lib of l.linkedLibraries()) {
-		for (const i of allLibraryIncludes(lib)) {
-			includes.push(i);
-		}
-	}
-
-	for (const i of l.includes()) {
-		includes.push(i);
-	}
-
-	return includes;
-}
-
 export function allLibs(c: ILinkedCompilation): IBuildPath[] {
 	const libs: IBuildPath[] = [];
-	for (const l of c.linkTo) {
-		for (const b of allLibraryBinaries(l)) {
-			libs.push(b);
-		}
+	for (const l of transitiveLibs(c)) {
+		libs.push(l.binary);
 	}
-
-	return libs;
-}
-
-function allLibraryBinaries(l: Library): IBuildPath[] {
-	const libs: IBuildPath[] = [];
-	for (const lib of l.linkedLibraries()) {
-		for (const l of allLibraryBinaries(lib)) {
-			libs.push(l);
-		}
-	}
-
-	libs.push(l.binary);
 
 	return libs;
 }
@@ -73,29 +66,20 @@ export interface IPkgDeps {
 
 export function allPkgDeps(c: ILinkedCompilation): IPkgDeps {
 	const names: string[] = [];
-	const prereqs: Path[] = [];
 	for (const l of c.linkTo) {
 		names.push(l.name);
-		prereqs.push(...allLibraryPkgDeps(l));
 	}
 
 	for (const p of c.pkgs) {
 		names.push(p.name);
 	}
 
-	return { names, prereqs };
-}
-
-function allLibraryPkgDeps(l: Library): IBuildPath[] {
-	const deps: IBuildPath[] = [];
-	for (const lib of l.linkedLibraries()) {
-		for (const d of allLibraryPkgDeps(lib)) {
-			deps.push(d);
-		}
+	const prereqs: Path[] = [];
+	for (const l of transitiveLibs(c)) {
+		prereqs.push(pkgLibFile(l.name));
 	}
 
-	deps.push(pkgLibFile(l.name));
-	return deps;
+	return { names, prereqs };
 }
 
 export function pkgLibFile(name: string): IBuildPath {
