@@ -39,6 +39,69 @@ function allLibraryIncludes(l: Library): Path[] {
 	return includes;
 }
 
+export function allLibs(c: ILinkedCompilation): IBuildPath[] {
+	const libs: IBuildPath[] = [];
+	for (const l of c.linkTo) {
+		for (const b of allLibraryBinaries(l)) {
+			libs.push(b);
+		}
+	}
+
+	return libs;
+}
+
+function allLibraryBinaries(l: Library): IBuildPath[] {
+	const libs: IBuildPath[] = [];
+	for (const lib of l.linkedLibraries()) {
+		for (const l of allLibraryBinaries(lib)) {
+			libs.push(l);
+		}
+	}
+
+	libs.push(l.binary);
+
+	return libs;
+}
+
+export interface IPkgDeps {
+	/** Names of all mods (linkTo/pkgs an LC needs) */
+	names: string[];
+
+	/** Built paths of pc files required for pc computation */
+	prereqs: Path[];
+}
+
+export function allPkgDeps(c: ILinkedCompilation): IPkgDeps {
+	const names: string[] = [];
+	const prereqs: Path[] = [];
+	for (const l of c.linkTo) {
+		names.push(l.name);
+		prereqs.push(...allLibraryPkgDeps(l));
+	}
+
+	for (const p of c.pkgs) {
+		names.push(p.name);
+	}
+
+	return { names, prereqs };
+}
+
+function allLibraryPkgDeps(l: Library): IBuildPath[] {
+	const deps: IBuildPath[] = [];
+	for (const lib of l.linkedLibraries()) {
+		for (const d of allLibraryPkgDeps(lib)) {
+			deps.push(d);
+		}
+	}
+
+	deps.push(pkgLibFile(l.name));
+	return deps;
+}
+
+export function pkgLibFile(name: string): IBuildPath {
+	return Path.build(`pkgconfig/${name}.pc`);
+}
+
 export enum ResolvedLibraryType {
 	static = 'static',
 	dynamic = 'dynamic',

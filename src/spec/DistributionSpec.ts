@@ -351,10 +351,18 @@ describe('Distribution', function () {
 		it('compiles and links libraries', async () => {
 			await writePath('include/add.h', 'int add(int a, int b);');
 
+			await writePath('include/zero.h', 'int zero();');
+			await writePath(
+				'src/zero.c',
+				'#include "zero.h"',
+				'int zero() { return 0; }',
+			);
+
 			await writePath(
 				'src/add.c',
 				'#include "add.h"',
-				'int add(int a, int b){ return a + b; }',
+				'#include "zero.h"',
+				'int add(int a, int b){ return a + b + zero(); }',
 			);
 
 			await writePath(
@@ -369,9 +377,15 @@ describe('Distribution', function () {
 				version: '1.2.3',
 			});
 
+			const zero = d.addLibrary({
+				name: 'zero',
+				src: ['src/zero.c'],
+			});
+
 			const add = d.addLibrary({
 				name: 'add',
 				src: ['src/add.c'],
+				linkTo: [zero],
 			});
 
 			const test = d.addExecutable({

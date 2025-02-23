@@ -8,6 +8,10 @@ import {
 	allIncludes,
 	makeLibrary,
 	ILinkedCompilation,
+	allPkgDeps,
+	pkgLibFile,
+	IPkgDeps,
+	allLibs,
 } from './Library.js';
 import { Makefile, Path, IBuildPath } from 'esmakefile';
 import { PkgConfig } from 'espkg-config';
@@ -84,76 +88,65 @@ export class GccCompiler implements ICompiler {
 		return objs;
 	}
 
+	private _link(
+		c: ILinkedCompilation,
+		isLib: boolean,
+		path: IBuildPath,
+		objs: IBuildPath[],
+		pkgDeps: IPkgDeps,
+	): void {
+		const libs = allLibs(c);
+
+		this.make.add(
+			path,
+			[...objs, ...pkgDeps.prereqs, ...libs],
+			async (args) => {
+				let cc = this.cc;
+				if (isCxxLink(c.src)) {
+					cc = this.cxx;
+				}
+
+				const objsAbs = args.absAll(...objs);
+
+				const { flags: pkgLibs } = await this._pkg.libs(pkgDeps.names);
+
+				const flags: string[] = [];
+				if (isLib) {
+					flags.push('-shared');
+				}
+
+				if (this.requiresRpath) {
+					flags.push(`-Wl,-rpath=$ORIGIN`);
+				}
+
+				return args.spawn(cc, [
+					...flags,
+					'-o',
+					args.abs(path),
+					...objsAbs,
+					...pkgLibs,
+				]);
+			},
+		);
+	}
+
 	public addExecutable(exe: IExecutable): Executable {
 		const objs = this._compile(exe, false);
 
-		/*
-		 * Name: exe.name
-		 * Version:
-		 * Description:
-		 * Cflags: ...-IincludeDir
-		 * Libs: ?
-		 * Requires.private: ...imports/linkTo
-		 */
-
 		const e = new Executable(exe.name, exe.outDir.join(exe.name));
 
-		const linkFlags: string[] = [];
-		const libDeps = [];
-		if (exe.linkTo.length > 0) {
-			linkFlags.push(`-L${this.make.abs(exe.outDir)}`);
-			for (const l of exe.linkTo) {
-				// TODO handle dynamic & import
-				linkFlags.push(`-l${l.name}`);
-				libDeps.push(l.binary);
-			}
-		}
+		const pkgDeps = allPkgDeps(exe);
 
-		if (this.requiresRpath) {
-			linkFlags.push(`-Wl,-rpath=$ORIGIN`);
-		}
-
-		const linkCxx = isCxxLink(exe.src);
-		const pkgNames = exe.pkgs.map((p) => p.name);
-
-		this.make.add(e.binary, [...libDeps, ...objs], async (args) => {
-			let cc = this.cc;
-			if (linkCxx) {
-				cc = this.cxx;
-			}
-
-			// TODO - dynamic linking too
-			const { flags: pkgLibs } = await this._pkg.libs(pkgNames, {
-				static: true,
-			});
-
-			const objsAbs = args.absAll(...objs);
-			return args.spawn(cc, [
-				'-o',
-				args.abs(e.binary),
-				...objsAbs,
-				...linkFlags,
-				...pkgLibs,
-			]);
-		});
+		this._link(exe, false, e.binary, objs, pkgDeps);
 
 		return e;
 	}
 
 	public addLibrary(lib: ILibrary): Library {
-		const pcReqs: string[] = [];
-		const pcDeps: Path[] = [];
-		for (const l of lib.linkTo) {
-			pcReqs.push(l.name);
-			pcDeps.push(Path.build(`pkgconfig/${l.name}.pc`));
-		}
-
-		for (const p of lib.pkgs) {
-			pcReqs.push(p.name);
-		}
+		const pkgDeps = allPkgDeps(lib);
 
 		// TODO - Distribution-specific pkgconfig dir?
-		const pcFile = Path.build(`pkgconfig/${lib.name}.pc`);
+		const pcFile = pkgLibFile(lib.name);
 
 		this.make.add(pcFile, async (args) => {
 			const contents: string[] = [
@@ -168,10 +161,11 @@ export class GccCompiler implements ICompiler {
 			const libs = `-L${args.abs(lib.outDir)} -l${lib.name}`;
 			contents.push(`Libs: ${libs}`);
 
+			const reqs = pkgDeps.names.join(' ');
 			if (lib.type === ResolvedLibraryType.dynamic) {
-				contents.push(`Requires.private: ${pcReqs}`);
+				contents.push(`Requires.private: ${reqs}`);
 			} else {
-				contents.push(`Requires: ${pcReqs}`);
+				contents.push(`Requires: ${reqs}`);
 			}
 
 			await writeFile(args.abs(pcFile), contents.join('\n'), 'utf8');
@@ -192,19 +186,8 @@ export class GccCompiler implements ICompiler {
 			const path = lib.outDir.join(`lib${lib.name}${this._dylibExt}`);
 			const l = makeLibrary(lib, path);
 
-			this.make.add(path, [...objs, ...pcDeps], async (args) => {
-				const objsAbs = args.absAll(...objs);
+			this._link(lib, true, l.binary, objs, pkgDeps);
 
-				const { flags: pkgLibs } = await this._pkg.libs(pcReqs);
-
-				return args.spawn(this.cc, [
-					'-shared',
-					'-o',
-					args.abs(path),
-					...objsAbs,
-					...pkgLibs,
-				]);
-			});
 			return l;
 		}
 	}

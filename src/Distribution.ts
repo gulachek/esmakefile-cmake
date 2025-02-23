@@ -82,7 +82,10 @@ export class Distribution {
 
 		this._pkg = new PkgConfig({
 			// TODO - relative to cwd or srcdir or what?
-			searchPaths: [resolve('vendor/lib/pkgconfig')],
+			searchPaths: [
+				this.make.abs(Path.build('pkgconfig')),
+				resolve('vendor/lib/pkgconfig'),
+			],
 		});
 
 		const compilerArgs: ICompilerArgs = {
