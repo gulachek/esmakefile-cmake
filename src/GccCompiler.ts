@@ -5,7 +5,6 @@ import {
 	ILibrary,
 	Library,
 	ResolvedLibraryType,
-	allIncludes,
 	makeLibrary,
 	ILinkedCompilation,
 	allPkgDeps,
@@ -16,7 +15,15 @@ import {
 import { Makefile, Path, IBuildPath } from 'esmakefile';
 import { PkgConfig } from 'espkg-config';
 import { isCxxSrc, isCxxLink, CStandard, CxxStandard } from './Source.js';
+import {
+	CompileCommandIndex,
+	dumpCompileCommands,
+	ICompileCommand,
+	parseCompileCommands,
+} from './CompileCommands.js';
 import { writeFile } from 'node:fs/promises';
+import { resolve } from 'node:path/posix';
+import { cwd } from 'node:process';
 
 export class GccCompiler implements ICompiler {
 	private make: Makefile;
@@ -28,6 +35,7 @@ export class GccCompiler implements ICompiler {
 	private _pkg: PkgConfig;
 	private _cStd?: CStandard;
 	private _cxxStd?: CxxStandard;
+	private _commands = new Map<string, CompileCommandIndex>();
 
 	constructor(args: ICompilerArgs) {
 		this.make = args.make;
@@ -46,42 +54,77 @@ export class GccCompiler implements ICompiler {
 		}
 	}
 
-	private _compile(c: ILinkedCompilation, fPIC: boolean): IBuildPath[] {
-		const includeFlags = allIncludes(c).map((i) => {
-			return `-I${this.make.abs(i)}`;
-		});
+	private _compile(
+		c: ILinkedCompilation,
+		fPIC: boolean,
+		pkgDeps: IPkgDeps,
+	): IBuildPath[] {
+		const compileCommands = c.compileCommands;
 
-		const objs: IBuildPath[] = [];
+		this.make.add(compileCommands, pkgDeps.prereqs, async (args) => {
+			const index: CompileCommandIndex = new Map<string, ICompileCommand>();
 
-		// TODO transitive deps
-		const pkgNames = c.pkgs.map((p) => p.name);
+			const includeFlags = c.includeDirs.map((i) => {
+				return `-I${this.make.abs(i)}`;
+			});
 
-		for (const s of c.src) {
-			const obj = Path.gen(s, { ext: '.o' });
-			objs.push(obj);
+			// TODO postreqs
+			const { flags: pkgCflags } = await this._pkg.cflags(pkgDeps.names);
 
-			this.make.add(obj, [s], async (args) => {
+			for (const s of c.src) {
 				const flags = ['-c'];
 				if (fPIC) flags.push('-fPIC');
 
 				let cc: string;
 				if (isCxxSrc(s)) {
-					cc = this.cxx;
+					cc = 'clang++';
 					if (this._cxxStd) flags.push(`-std=c++${this._cxxStd}`);
 				} else {
-					cc = this.cc;
+					cc = 'clang';
 					if (this._cStd) flags.push(`-std=c${this._cStd}`);
 				}
 
-				const { flags: pkgCflags } = await this._pkg.cflags(pkgNames);
-				return args.spawn(cc, [
-					...flags,
-					...pkgCflags,
-					...includeFlags,
-					'-o',
-					args.abs(obj),
-					args.abs(s),
-				]);
+				const file = args.abs(s);
+				const directory = resolve(cwd());
+				index.set(file, {
+					directory,
+					file,
+					arguments: [cc, ...flags, ...includeFlags, ...pkgCflags, args.abs(s)],
+				});
+			}
+
+			// Reset cache!
+			this._commands.set(c.name, index);
+			await dumpCompileCommands(args.abs(compileCommands), index);
+		});
+
+		const objs: IBuildPath[] = [];
+
+		for (const s of c.src) {
+			const obj = Path.gen(s, { ext: '.o' });
+			objs.push(obj);
+
+			this.make.add(obj, [s, compileCommands], async (args) => {
+				let index: CompileCommandIndex = this._commands.get(c.name);
+				if (!index) {
+					index = await parseCompileCommands(args.abs(compileCommands));
+					this._commands.set(c.name, index);
+				}
+
+				const cmd = index.get(args.abs(s));
+				if (!cmd) {
+					args.logStream.write(`${s} not found in ${compileCommands}`);
+					return false;
+				}
+
+				let cc: string;
+				if (isCxxSrc(s)) {
+					cc = this.cxx;
+				} else {
+					cc = this.cc;
+				}
+
+				await args.spawn(cc, [...cmd.arguments.slice(1), '-o', args.abs(obj)]);
 			});
 		}
 
@@ -131,11 +174,11 @@ export class GccCompiler implements ICompiler {
 	}
 
 	public addExecutable(exe: IExecutable): Executable {
-		const objs = this._compile(exe, false);
+		const pkgDeps = allPkgDeps(exe);
+
+		const objs = this._compile(exe, false, pkgDeps);
 
 		const e = new Executable(exe.name, exe.outDir.join(exe.name));
-
-		const pkgDeps = allPkgDeps(exe);
 
 		this._link(exe, false, e.binary, objs, pkgDeps);
 
@@ -171,7 +214,7 @@ export class GccCompiler implements ICompiler {
 			await writeFile(args.abs(pcFile), contents.join('\n'), 'utf8');
 		});
 
-		const objs = this._compile(lib, true);
+		const objs = this._compile(lib, true, pkgDeps);
 
 		if (lib.type === ResolvedLibraryType.static) {
 			const path = lib.outDir.join(`lib${lib.name}.a`);

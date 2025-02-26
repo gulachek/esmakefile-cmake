@@ -146,6 +146,7 @@ export class Distribution {
 			includeDirs,
 			linkTo,
 			pkgs,
+			compileCommands: this.outDir.join(`.${opts.name}-compile_commands.json`),
 		};
 	}
 
@@ -216,6 +217,16 @@ export class Distribution {
 
 	findPackage(name: string): IImportedLibrary {
 		return { name };
+	}
+
+	/** clangd compilation databases for all libraries/executables. Should be merged for development environment */
+	compileCommandsComponents(): IBuildPath[] {
+		const out: IBuildPath[] = [];
+		for (const e of this._executables) out.push(e.compileCommands);
+
+		for (const l of this._libraries) out.push(l.compileCommands);
+
+		return out;
 	}
 
 	private _resolveLibraryType(type: LibraryType): ResolvedLibraryType {

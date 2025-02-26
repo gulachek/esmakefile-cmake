@@ -1,5 +1,5 @@
 import { expect } from 'chai';
-import { Distribution, LibraryType } from '../index.js';
+import { Distribution, LibraryType, addCompileCommands } from '../index.js';
 import {
 	Makefile,
 	PathLike,
@@ -824,6 +824,36 @@ describe('Distribution', function () {
 
 				await expectOutput(test.binary, make.abs(img.binary));
 			});
+		});
+
+		it('generates a compile_commands.json file', async () => {
+			const add = Path.src('src/add.c');
+
+			await writePath('include/add.h', 'int add(int a, int b);');
+
+			await writePath(
+				add,
+				'#include "add.h"',
+				'int add(int a, int b) { return a + b; }',
+			);
+
+			const d = new Distribution(make, {
+				name: 'test',
+				version: '1.2.3',
+			});
+
+			d.addLibrary({
+				name: 'add',
+				src: [add],
+			});
+
+			const commands = addCompileCommands(make, d);
+
+			await updateTarget(make, commands);
+
+			const clangCheck = process.env['CLANG_CHECK'];
+			expect(clangCheck).not.to.be.empty;
+			await run(clangCheck, ['-p', make.buildRoot, make.abs(add)]);
 		});
 	});
 

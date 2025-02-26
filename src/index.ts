@@ -6,3 +6,4 @@ export {
 } from './Distribution.js';
 export { Executable } from './Executable.js';
 export { Library } from './Library.js';
+export { addCompileCommands } from './CompileCommands.js';

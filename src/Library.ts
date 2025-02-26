@@ -7,6 +7,7 @@ export interface ILinkedCompilation {
 	includeDirs: Path[];
 	linkTo: Library[];
 	pkgs: IImportedLibrary[];
+	compileCommands: IBuildPath;
 }
 
 function transitiveLibs(c: ILinkedCompilation): Library[] {
