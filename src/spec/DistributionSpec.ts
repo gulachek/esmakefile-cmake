@@ -827,7 +827,10 @@ describe('Distribution', function () {
 		});
 
 		it('generates a compile_commands.json file', async () => {
+			await mkdir(pkgconfigDir, { recursive: true });
+
 			const add = Path.src('src/add.c');
+			const test = Path.src('src/test.c');
 
 			await writePath('include/add.h', 'int add(int a, int b);');
 
@@ -837,14 +840,36 @@ describe('Distribution', function () {
 				'int add(int a, int b) { return a + b; }',
 			);
 
+			await writePath(
+				test,
+				'#include "add.h"',
+				'int main() { return add(TEST_FRAMEWORK_VERSION,-TEST_FRAMEWORK_VERSION); }',
+			);
+
+			await writePath(
+				'vendor/lib/pkgconfig/test-framework.pc',
+				'Name: test-framework',
+				'Version:',
+				'Description:',
+				'Cflags: -DTEST_FRAMEWORK_VERSION=123',
+			);
+
 			const d = new Distribution(make, {
 				name: 'test',
 				version: '1.2.3',
 			});
 
-			d.addLibrary({
+			const addLib = d.addLibrary({
 				name: 'add',
 				src: [add],
+			});
+
+			const testFramework = d.findPackage('test-framework');
+
+			d.addTest({
+				name: 'test',
+				src: [test],
+				linkTo: [addLib, testFramework],
 			});
 
 			const commands = addCompileCommands(make, d);
@@ -853,7 +878,12 @@ describe('Distribution', function () {
 
 			const clangCheck = process.env['CLANG_CHECK'];
 			expect(clangCheck).not.to.be.empty;
-			await run(clangCheck, ['-p', make.buildRoot, make.abs(add)]);
+			await run(clangCheck, [
+				'-p',
+				make.buildRoot,
+				make.abs(add),
+				make.abs(test),
+			]);
 		});
 	});
 

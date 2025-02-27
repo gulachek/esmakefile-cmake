@@ -147,6 +147,7 @@ export class Distribution {
 			linkTo,
 			pkgs,
 			compileCommands: this.outDir.join(`.${opts.name}-compile_commands.json`),
+			devOnly: false,
 		};
 	}
 
@@ -156,11 +157,12 @@ export class Distribution {
 	): Executable {
 		// TODO validate opts
 		const exe = this._createLinkedComp(opts);
+		exe.devOnly = devOnly;
+		this._executables.push(exe);
 
 		const out = this._compiler.addExecutable(exe);
 
 		if (!devOnly) {
-			this._executables.push(exe);
 			this._addSrc(exe);
 
 			// TODO - remove this dependency.
@@ -294,10 +296,10 @@ export class Distribution {
 				await copyFile(args.abs(src), absDest);
 			}
 
-			const targets: ILinkedCompilation[] = [
-				...this._executables,
-				...this._libraries,
-			];
+			const distExes = this._executables.filter((e) => !e.devOnly);
+			const distLibs = this._libraries.filter((l) => !l.devOnly);
+
+			const targets: ILinkedCompilation[] = [...distExes, ...distLibs];
 
 			const pkgNames = new Set<string>();
 
@@ -337,7 +339,7 @@ export class Distribution {
 			args.logStream.write(`Creating directory ${cmakeDir}\n`);
 			await mkdir(args.abs(cmakeDir), { recursive: true });
 
-			for (const exe of this._executables) {
+			for (const exe of distExes) {
 				cmake.push(`add_executable(${exe.name}`);
 				for (const s of exe.src) {
 					cmake.push(`\t${s.rel()}`);
@@ -361,7 +363,7 @@ export class Distribution {
 			const pkgconfig = dir.join('pkgconfig');
 			const msvcPkgconfig = pkgconfig.join('msvc');
 
-			if (this._libraries.length > 0) {
+			if (distLibs.length > 0) {
 				args.logStream.write(`Creating ${msvcPkgconfig}`);
 				await mkdir(args.abs(msvcPkgconfig), { recursive: true });
 
@@ -369,7 +371,7 @@ export class Distribution {
 				cmake.push('\ninstall(DIRECTORY include/ TYPE INCLUDE)');
 			}
 
-			for (const lib of this._libraries) {
+			for (const lib of distLibs) {
 				cmake.push(`add_library(${lib.name}`);
 				for (const s of lib.src) {
 					cmake.push(`\t${s.rel()}`);

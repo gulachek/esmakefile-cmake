@@ -8,6 +8,8 @@ export interface ILinkedCompilation {
 	linkTo: Library[];
 	pkgs: IImportedLibrary[];
 	compileCommands: IBuildPath;
+	// not included in actual distribution
+	devOnly: boolean;
 }
 
 function transitiveLibs(c: ILinkedCompilation): Library[] {
