@@ -174,6 +174,34 @@ describe('Distribution', function () {
 			await expectOutput(hello.binary, 'hello!');
 		});
 
+		it('updates when source updates', async () => {
+			await writePath(
+				'src/hello.c',
+				'#include <stdio.h>',
+				'int main(){ printf("hello!"); return 0; }',
+			);
+
+			const d = new Distribution(make, {
+				name: 'hello',
+				version: '1.2.3',
+			});
+
+			const hello = d.addExecutable({
+				name: 'hello',
+				src: ['src/hello.c'],
+			});
+
+			await expectOutput(hello.binary, 'hello!');
+
+			await writePath(
+				'src/hello.c',
+				'#include <stdio.h>',
+				'int main(){ printf("hi."); return 0; }',
+			);
+
+			await expectOutput(hello.binary, 'hi.');
+		});
+
 		it('can compile multiple source file exe', async () => {
 			await writePath(
 				'src/hello.c',
