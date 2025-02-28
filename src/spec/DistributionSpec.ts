@@ -376,6 +376,32 @@ describe('Distribution', function () {
 			await expectOutput(hello.binary, '4');
 		});
 
+		it('recompiles after updating header', async () => {
+			await writePath('include/val.h', '#define VAL 4');
+
+			await writePath(
+				'src/main.c',
+				'#include "val.h"',
+				'#include <stdio.h>',
+				'int main(){ printf("%d", VAL); return 0; }',
+			);
+
+			const d = new Distribution(make, {
+				name: 'test',
+				version: '1.2.3',
+			});
+
+			const hello = d.addExecutable({
+				name: 'test',
+				src: ['src/main.c'],
+			});
+
+			await expectOutput(hello.binary, '4');
+
+			await writePath('include/val.h', '#define VAL 5');
+			await expectOutput(hello.binary, '5');
+		});
+
 		it('compiles and links libraries', async () => {
 			await writePath('include/add.h', 'int add(int a, int b);');
 

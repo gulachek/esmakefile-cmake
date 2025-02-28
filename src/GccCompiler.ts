@@ -21,9 +21,10 @@ import {
 	ICompileCommand,
 	parseCompileCommands,
 } from './CompileCommands.js';
-import { writeFile } from 'node:fs/promises';
+import { writeFile, readFile } from 'node:fs/promises';
 import { resolve } from 'node:path/posix';
 import { cwd } from 'node:process';
+import { parsePrereqs } from './makeDepfile.js';
 
 export class GccCompiler implements ICompiler {
 	private make: Makefile;
@@ -124,7 +125,23 @@ export class GccCompiler implements ICompiler {
 					cc = this.cc;
 				}
 
-				await args.spawn(cc, [...cmd.arguments.slice(1), '-o', args.abs(obj)]);
+				const deps = args.abs(Path.gen(s, { ext: '.deps' }));
+
+				const result = await args.spawn(cc, [
+					...cmd.arguments.slice(1),
+					'-o',
+					args.abs(obj),
+					'-MD',
+					'-MF',
+					deps,
+				]);
+
+				const depfileContents = await readFile(deps, 'utf8');
+				for (const p of parsePrereqs(depfileContents)) {
+					args.addPostreq(p);
+				}
+
+				return result;
 			});
 		}
 
