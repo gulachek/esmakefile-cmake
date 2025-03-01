@@ -1,6 +1,7 @@
 set path=.
 set path+=src
 set path+=src/spec
+set path+=.github/workflows
 
 nnoremap <Leader>b :!npm run build<CR>
 nnoremap <Leader>d :!npx mocha --inspect-brk -- dist/spec<CR>

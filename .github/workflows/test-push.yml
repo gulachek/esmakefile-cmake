@@ -4,12 +4,16 @@ on: [push]
 
 jobs:
   npm-test:
-    runs-on: ${{ matrix.os }}
+    runs-on: ${{ matrix.runner.os }}
     strategy:
       matrix:
-        os: [macos-latest, ubuntu-latest]
+        runner:
+          - os: macos-latest
+            clang-check: /opt/homebrew/opt/llvm@15/bin/clang-check
+          - os: ubuntu-latest
+            clang-check: /usr/bin/clang-check-18
     env:
-      CLANG_CHECK: /usr/bin/clang-check
+      CLANG_CHECK: ${{ matrix.runner.clang-check }}
     steps:
       - uses: actions/checkout@v4
       - name: Use Node.js
