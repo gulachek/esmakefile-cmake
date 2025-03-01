@@ -8,6 +8,8 @@ jobs:
     strategy:
       matrix:
         os: [macos-latest, ubuntu-latest]
+    env:
+      CLANG_CHECK: /usr/bin/clang-check
     steps:
       - uses: actions/checkout@v4
       - name: Use Node.js
@@ -34,4 +36,3 @@ jobs:
           set /p VS=<vsdir.txt
           call "%VS%\\VC\\Auxiliary\\Build\\vcvars64.bat"
           npm test
-
