@@ -630,14 +630,14 @@ describe('Distribution', function () {
 			const addPkg = d.findPackage('add');
 
 			await writePath(
-					'include/mul.h',
-					'#ifdef _WIN32',
-					'#define EXPORT __declspec(dllexport)',
-					'#else',
-					'#define EXPORT',
-					'#endif',
-					'EXPORT int mul(int a, int b);'
-					);
+				'include/mul.h',
+				'#ifdef _WIN32',
+				'#define EXPORT __declspec(dllexport)',
+				'#else',
+				'#define EXPORT',
+				'#endif',
+				'EXPORT int mul(int a, int b);',
+			);
 
 			await writePath(
 				'src/mul.c',

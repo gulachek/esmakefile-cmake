@@ -27,7 +27,7 @@ import {
 	allPkgDeps,
 	pkgLibFile,
 	IPkgDeps,
-	allLibs
+	allLibs,
 } from './Library.js';
 import { CStandard, CxxStandard, isCxxSrc } from './Source.js';
 import {
@@ -122,11 +122,11 @@ export class MsvcCompiler implements ICompiler {
 					return false;
 				}
 
-				return runCl(this.cc, [
-					...cmd.arguments.slice(1),
-					`/Fo${args.abs(obj)}`,
-					'/showIncludes'
-				], args);
+				return runCl(
+					this.cc,
+					[...cmd.arguments.slice(1), `/Fo${args.abs(obj)}`, '/showIncludes'],
+					args,
+				);
 			});
 		}
 
@@ -136,7 +136,7 @@ export class MsvcCompiler implements ICompiler {
 	private _link(
 		c: ILinkedCompilation,
 		path: IBuildPath,
-		importPath: IBuildPath|null,
+		importPath: IBuildPath | null,
 		objs: IBuildPath[],
 		pkgDeps: IPkgDeps,
 	): void {
@@ -166,7 +166,6 @@ export class MsvcCompiler implements ICompiler {
 				]);
 			},
 		);
-
 	}
 
 	public addExecutable(exe: IExecutable): Executable {
@@ -209,36 +208,40 @@ export class MsvcCompiler implements ICompiler {
 		const pcFile = pkgLibFile(lib.name);
 
 		this.make.add(pcFile, async (args) => {
-				const contents: string[] = [
-					`Name: ${lib.name}`,
-					'Version:',
-					'Description:',
-				];
+			const contents: string[] = [
+				`Name: ${lib.name}`,
+				'Version:',
+				'Description:',
+			];
 
-				const cflags: string[] = [];
-				for (const i of lib.includeDirs) {
-					cflags.push('/I', pcEscPath(args.abs(i)));
-				}
-				contents.push(`Cflags: ${cflags.join(' ')}`);
+			const cflags: string[] = [];
+			for (const i of lib.includeDirs) {
+				cflags.push('/I', pcEscPath(args.abs(i)));
+			}
+			contents.push(`Cflags: ${cflags.join(' ')}`);
 
-				const importPath = pcEscPath(args.abs(l.importLibrary || l.binary));
-				contents.push(`Libs: ${importPath}`);
+			const importPath = pcEscPath(args.abs(l.importLibrary || l.binary));
+			contents.push(`Libs: ${importPath}`);
 
-				const reqs = pkgDeps.names.join(' ');
-				if (lib.type === ResolvedLibraryType.dynamic) {
-					contents.push(`Requires.private: ${reqs}`);
-				} else {
-					contents.push(`Requires: ${reqs}`);
-				}
+			const reqs = pkgDeps.names.join(' ');
+			if (lib.type === ResolvedLibraryType.dynamic) {
+				contents.push(`Requires.private: ${reqs}`);
+			} else {
+				contents.push(`Requires: ${reqs}`);
+			}
 
-				await writeFile(args.abs(pcFile), contents.join('\r\n'), 'utf8');
+			await writeFile(args.abs(pcFile), contents.join('\r\n'), 'utf8');
 		});
 
 		return l;
 	}
 }
 
-async function runCl(cl: string, clArgs: string[], recipeArgs: RecipeArgs): Promise<boolean> {
+async function runCl(
+	cl: string,
+	clArgs: string[],
+	recipeArgs: RecipeArgs,
+): Promise<boolean> {
 	const stdout: Buffer[] = [];
 	const proc = spawn(cl, clArgs, { stdio: 'pipe' });
 	proc.stdout.on('data', (chunk) => {
