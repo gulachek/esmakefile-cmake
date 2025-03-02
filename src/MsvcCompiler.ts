@@ -30,10 +30,18 @@ import {
 	allLibs
 } from './Library.js';
 import { CStandard, CxxStandard, isCxxSrc } from './Source.js';
+import {
+	CompileCommandIndex,
+	dumpCompileCommands,
+	ICompileCommand,
+	parseCompileCommands,
+} from './CompileCommands.js';
 import { Makefile, Path, IBuildPath, RecipeArgs } from 'esmakefile';
 import { PkgConfig } from 'espkg-config';
 import { spawn } from 'node:child_process';
 import { writeFile } from 'node:fs/promises';
+import { resolve } from 'node:path';
+import { cwd } from 'node:process';
 
 export class MsvcCompiler implements ICompiler {
 	private make: Makefile;
@@ -42,6 +50,7 @@ export class MsvcCompiler implements ICompiler {
 	private _cStd?: CStandard;
 	private _cxxStd?: CxxStandard;
 	private _pkg: PkgConfig;
+	private _commands = new Map<string, CompileCommandIndex>();
 
 	constructor(args: ICompilerArgs) {
 		this.make = args.make;
@@ -53,6 +62,42 @@ export class MsvcCompiler implements ICompiler {
 	}
 
 	private _compile(c: ILinkedCompilation, pkgDeps: IPkgDeps): IBuildPath[] {
+		const compileCommands = c.compileCommands;
+
+		this.make.add(compileCommands, pkgDeps.prereqs, async (args) => {
+			const index: CompileCommandIndex = new Map<string, ICompileCommand>();
+
+			const includeFlags = c.includeDirs.map((i) => {
+				return `-I${this.make.abs(i)}`;
+			});
+
+			// TODO postreqs
+			const { flags: pkgCflags } = await this._pkg.cflags(pkgDeps.names);
+
+			for (const s of c.src) {
+				const flags = ['/nologo', '/c'];
+				if (isCxxSrc(s)) {
+					if (this._cxxStd) flags.push(`/std:c++${this._cxxStd}`);
+				} else {
+					if (this._cStd) flags.push(`/std:c${this._cStd}`);
+				}
+
+				const cc = 'clang-cl';
+
+				const file = args.abs(s);
+				const directory = resolve(cwd());
+				index.set(file, {
+					directory,
+					file,
+					arguments: [cc, ...flags, ...includeFlags, ...pkgCflags, args.abs(s)],
+				});
+			}
+
+			// Reset cache!
+			this._commands.set(c.name, index);
+			await dumpCompileCommands(args.abs(compileCommands), index);
+		});
+
 		const includeFlags: string[] = [];
 		for (const i of c.includeDirs) {
 			includeFlags.push('/I', this.make.abs(i));
@@ -64,22 +109,23 @@ export class MsvcCompiler implements ICompiler {
 			const obj = Path.gen(s, { ext: '.obj' });
 			objs.push(obj);
 
-			this.make.add(obj, [s, ...pkgDeps.prereqs], async (args) => {
-				const flags = ['/nologo', '/c', '/showIncludes'];
-				if (isCxxSrc(s)) {
-					if (this._cxxStd) flags.push(`/std:c++${this._cxxStd}`);
-				} else {
-					if (this._cStd) flags.push(`/std:c${this._cStd}`);
+			this.make.add(obj, [s, compileCommands], async (args) => {
+				let index: CompileCommandIndex = this._commands.get(c.name);
+				if (!index) {
+					index = await parseCompileCommands(args.abs(compileCommands));
+					this._commands.set(c.name, index);
 				}
 
-				const { flags: pkgCflags } = await this._pkg.cflags(pkgDeps.names);
+				const cmd = index.get(args.abs(s));
+				if (!cmd) {
+					args.logStream.write(`${s} not found in ${compileCommands}`);
+					return false;
+				}
 
 				return runCl(this.cc, [
-					...flags,
-					...pkgCflags,
-					...includeFlags,
+					...cmd.arguments.slice(1),
 					`/Fo${args.abs(obj)}`,
-					args.abs(s),
+					'/showIncludes'
 				], args);
 			});
 		}
