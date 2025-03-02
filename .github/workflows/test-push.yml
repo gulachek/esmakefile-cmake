@@ -39,4 +39,5 @@ jobs:
           "%ProgramFiles(x86)%\\Microsoft Visual Studio\\Installer\\vswhere.exe" -property resolvedInstallationPath > vsdir.txt
           set /p VS=<vsdir.txt
           call "%VS%\\VC\\Auxiliary\\Build\\vcvars64.bat"
+          set CLANG_CHECK=%ProgramFiles%\\LLVM\\bin\\clang-check.exe
           npm test

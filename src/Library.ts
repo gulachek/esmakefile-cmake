@@ -53,21 +53,6 @@ function libTransitiveLibs(l: Library): Library[] {
 	return libs;
 }
 
-export function allIncludes(c: ILinkedCompilation): Path[] {
-	const includes: Path[] = [];
-	for (const l of transitiveLibs(c)) {
-		for (const i of l.includes()) {
-			includes.push(i);
-		}
-	}
-
-	for (const i of c.includeDirs) {
-		includes.push(i);
-	}
-
-	return includes;
-}
-
 export function allLibs(c: ILinkedCompilation): IBuildPath[] {
 	const libs: IBuildPath[] = [];
 	for (const l of transitiveLibs(c)) {

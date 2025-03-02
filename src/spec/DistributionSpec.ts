@@ -629,7 +629,15 @@ describe('Distribution', function () {
 
 			const addPkg = d.findPackage('add');
 
-			await writePath('include/mul.h', 'int mul(int a, int b);');
+			await writePath(
+				'include/mul.h',
+				'#ifdef _WIN32',
+				'#define EXPORT __declspec(dllexport)',
+				'#else',
+				'#define EXPORT',
+				'#endif',
+				'EXPORT int mul(int a, int b);',
+			);
 
 			await writePath(
 				'src/mul.c',
@@ -1093,10 +1101,14 @@ describe('Distribution', function () {
 		});
 
 		it('does not install a test', () => {
-			// just to make sure we're in right cwd
-			expect(existsSync('vendor/bin/printv')).to.be.true;
-
-			expect(existsSync('vendor/bin/unit_test')).to.be.false;
+			// first check printv to make sure we're in the right directory (avoid success by accident)
+			if (platform() === 'win32') {
+				expect(existsSync('vendor\\bin\\printv.exe')).to.be.true;
+				expect(existsSync('vendor\\bin\\unit_test.exe')).to.be.false;
+			} else {
+				expect(existsSync('vendor/bin/printv')).to.be.true;
+				expect(existsSync('vendor/bin/unit_test')).to.be.false;
+			}
 		});
 
 		it('copies expected files to distribution', () => {
