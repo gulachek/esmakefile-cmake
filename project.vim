@@ -8,7 +8,7 @@ nnoremap <Leader>d :!npx mocha --inspect-brk -- dist/spec<CR>
 
 nnoremap <Leader>t :!npm test<CR>
 "Use below to test specific case. Can make this better later
-"nnoremap <Leader>t :!npx mocha -f 'compile_commands' -- dist/spec<CR>
+"nnoremap <Leader>t :!npx mocha -f external -- dist/spec<CR>
 
 augroup esmakefilecmake
 	autocmd!

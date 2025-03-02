@@ -24,11 +24,16 @@ import {
 	ResolvedLibraryType,
 	makeLibrary,
 	ILinkedCompilation,
-	allIncludes
+	allPkgDeps,
+	pkgLibFile,
+	IPkgDeps,
+	allLibs
 } from './Library.js';
 import { CStandard, CxxStandard, isCxxSrc } from './Source.js';
-import { Makefile, Path, IBuildPath } from 'esmakefile';
+import { Makefile, Path, IBuildPath, RecipeArgs } from 'esmakefile';
 import { PkgConfig } from 'espkg-config';
+import { spawn } from 'node:child_process';
+import { writeFile } from 'node:fs/promises';
 
 export class MsvcCompiler implements ICompiler {
 	private make: Makefile;
@@ -47,84 +52,97 @@ export class MsvcCompiler implements ICompiler {
 		this.lib = 'lib.exe';
 	}
 
-	private _compile(c: ILinkedCompilation): IBuildPath[] {
+	private _compile(c: ILinkedCompilation, pkgDeps: IPkgDeps): IBuildPath[] {
 		const includeFlags: string[] = [];
-		for (const i of allIncludes(c)) {
+		for (const i of c.includeDirs) {
 			includeFlags.push('/I', this.make.abs(i));
 		}
 
 		const objs: IBuildPath[] = [];
 
-		// TODO transitive deps
-		const pkgNames = c.pkgs.map((p) => p.name);
-
 		for (const s of c.src) {
 			const obj = Path.gen(s, { ext: '.obj' });
 			objs.push(obj);
 
-			this.make.add(obj, [s], async (args) => {
-				const flags = ['/nologo', '/c'];
+			this.make.add(obj, [s, ...pkgDeps.prereqs], async (args) => {
+				const flags = ['/nologo', '/c', '/showIncludes'];
 				if (isCxxSrc(s)) {
 					if (this._cxxStd) flags.push(`/std:c++${this._cxxStd}`);
 				} else {
 					if (this._cStd) flags.push(`/std:c${this._cStd}`);
 				}
 
-				const { flags: pkgCflags } = await this._pkg.cflags(pkgNames);
+				const { flags: pkgCflags } = await this._pkg.cflags(pkgDeps.names);
 
-				return args.spawn(this.cc, [
+				return runCl(this.cc, [
 					...flags,
 					...pkgCflags,
 					...includeFlags,
 					`/Fo${args.abs(obj)}`,
 					args.abs(s),
-				]);
+				], args);
 			});
 		}
 
 		return objs;
 	}
 
-	public addExecutable(exe: IExecutable): Executable {
-		const objs = this._compile(exe);
-		const e = new Executable(exe.name, exe.outDir.join(exe.name + '.exe'));
+	private _link(
+		c: ILinkedCompilation,
+		path: IBuildPath,
+		importPath: IBuildPath|null,
+		objs: IBuildPath[],
+		pkgDeps: IPkgDeps,
+	): void {
+		const libs = allLibs(c);
 
-		const pkgNames = exe.pkgs.map(p => p.name);
+		const targets: IBuildPath[] = [path];
+		const flags: string[] = ['/nologo'];
 
-		const linkFlags: string[] = [];
-		const libDeps = [];
-		if (exe.linkTo.length > 0) {
-			for (const l of exe.linkTo) {
-				const libFile = l.importLibrary || l.binary; // only dll will have importLibrary
-				linkFlags.push(this.make.abs(libFile));
-				libDeps.push(libFile);
-			}
+		if (importPath) {
+			targets.push(importPath);
+			flags.push('/LD');
 		}
 
-		this.make.add(e.binary, [...libDeps, ...objs], async (args) => {
-			const objsAbs = args.absAll(...objs);
+		this.make.add(
+			targets,
+			[...objs, ...pkgDeps.prereqs, ...libs],
+			async (args) => {
+				const objsAbs = args.absAll(...objs);
 
-			// TODO - dynamic linking too
-			const { flags: pkgLibs } = await this._pkg.libs(pkgNames, { static: true });
+				const { flags: pkgLibs } = await this._pkg.libs(pkgDeps.names);
 
-			return args.spawn(this.cc, [
-				'/nologo',
-				`/Fe${args.abs(e.binary)}`,
-				...linkFlags,
-				...objsAbs,
-				...pkgLibs
-			]);
-		});
+				return args.spawn(this.cc, [
+					...flags,
+					`/Fe${args.abs(path)}`,
+					...objsAbs,
+					...pkgLibs,
+				]);
+			},
+		);
+
+	}
+
+	public addExecutable(exe: IExecutable): Executable {
+		const pkgDeps = allPkgDeps(exe);
+
+		const objs = this._compile(exe, pkgDeps);
+		const e = new Executable(exe.name, exe.outDir.join(exe.name + '.exe'));
+
+		this._link(exe, e.binary, null, objs, pkgDeps);
 
 		return e;
 	}
 
 	public addLibrary(lib: ILibrary): Library {
-		const objs = this._compile(lib);
+		const pkgDeps = allPkgDeps(lib);
+
+		const objs = this._compile(lib, pkgDeps);
+		let l: Library;
 
 		if (lib.type === ResolvedLibraryType.static) {
 			const path = lib.outDir.join(lib.name + '.lib');
-			const l = makeLibrary(lib, path);
+			l = makeLibrary(lib, path);
 
 			this.make.add(path, objs, (args) => {
 				const objsAbs = args.absAll(...objs);
@@ -134,22 +152,82 @@ export class MsvcCompiler implements ICompiler {
 					...objsAbs,
 				]);
 			});
-			return l;
 		} else {
 			const path = lib.outDir.join(lib.name + '.dll');
 			const importPath = lib.outDir.join(lib.name + '.lib');
-			const l = makeLibrary(lib, path, importPath);
+			l = makeLibrary(lib, path, importPath);
 
-			this.make.add([path, importPath], objs, (args) => {
-				const objsAbs = args.absAll(...objs);
-				return args.spawn(this.cc, [
-					'/nologo',
-					'/LD',
-					`/Fe${args.abs(path)}`,
-					...objsAbs,
-				]);
-			});
-			return l;
+			this._link(lib, l.binary, l.importLibrary, objs, pkgDeps);
+		}
+
+		const pcFile = pkgLibFile(lib.name);
+
+		this.make.add(pcFile, async (args) => {
+				const contents: string[] = [
+					`Name: ${lib.name}`,
+					'Version:',
+					'Description:',
+				];
+
+				const cflags: string[] = [];
+				for (const i of lib.includeDirs) {
+					cflags.push('/I', pcEscPath(args.abs(i)));
+				}
+				contents.push(`Cflags: ${cflags.join(' ')}`);
+
+				const importPath = pcEscPath(args.abs(l.importLibrary || l.binary));
+				contents.push(`Libs: ${importPath}`);
+
+				const reqs = pkgDeps.names.join(' ');
+				if (lib.type === ResolvedLibraryType.dynamic) {
+					contents.push(`Requires.private: ${reqs}`);
+				} else {
+					contents.push(`Requires: ${reqs}`);
+				}
+
+				await writeFile(args.abs(pcFile), contents.join('\r\n'), 'utf8');
+		});
+
+		return l;
+	}
+}
+
+async function runCl(cl: string, clArgs: string[], recipeArgs: RecipeArgs): Promise<boolean> {
+	const stdout: Buffer[] = [];
+	const proc = spawn(cl, clArgs, { stdio: 'pipe' });
+	proc.stdout.on('data', (chunk) => {
+		stdout.push(chunk);
+	});
+	proc.stderr.on('data', (chunk) => {
+		recipeArgs.logStream.write(chunk);
+	});
+	const result = await new Promise<boolean>((res) => {
+		proc.on('close', (code) => {
+			res(code === 0);
+		});
+	});
+
+	const content = Buffer.concat(stdout).toString('utf8');
+	const lines = content.split('\r\n');
+	let printCRLF = false;
+
+	for (const line of lines) {
+		const match = line.match(/^Note: including file:\s+(.*)/);
+		if (match) {
+			recipeArgs.addPostreq(match[1]);
+		} else {
+			if (printCRLF) {
+				recipeArgs.logStream.write('\r\n');
+			}
+
+			recipeArgs.logStream.write(line);
+			printCRLF = true;
 		}
 	}
+
+	return result;
+}
+
+function pcEscPath(path: string): string {
+	return path.replace(/\\/g, '\\\\');
 }
