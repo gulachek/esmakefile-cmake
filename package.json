@@ -14,7 +14,7 @@
 		"cmake"
 	],
 	"author": "Nicholas Gulachek",
-	"license": "ISC",
+	"license": "GPL-2.1-or-later",
 	"bugs": {
 		"url": "https://github.com/gulachek/esmakefile-cmake/issues"
 	},
