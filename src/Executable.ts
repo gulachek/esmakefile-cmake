@@ -21,8 +21,12 @@ import { ILinkedCompilation } from './Library.js';
 
 export interface IExecutable extends ILinkedCompilation {}
 
+/** Type returned from addExecutable */
 export class Executable {
+	/** The name of the executable */
 	readonly name: string;
+
+	/** The binary built in the development build system */
 	readonly binary: IBuildPath;
 
 	constructor(name: string, binary: IBuildPath) {

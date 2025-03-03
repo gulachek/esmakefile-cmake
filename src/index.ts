@@ -19,9 +19,13 @@
 export {
 	Distribution,
 	LibraryType,
+	IDistributionOpts,
 	IAddLibraryOpts,
 	IAddExecutableOpts,
+	IAddTestOpts,
+	ITest,
 } from './Distribution.js';
 export { Executable } from './Executable.js';
-export { Library } from './Library.js';
+export { Library, IImportedLibrary } from './Library.js';
 export { addCompileCommands } from './CompileCommands.js';
+export { CStandard, CxxStandard } from './Source.js';

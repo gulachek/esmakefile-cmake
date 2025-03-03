@@ -18,6 +18,64 @@
  */
 import { IBuildPath, Path } from 'esmakefile';
 
+/**
+ * Type returned from findPackage. TREAT THIS AS OPAQUE RIGHT
+ * NOW. WILL LIKELY CHANGE
+ */
+export interface IImportedLibrary {
+	name: string;
+}
+
+/**
+ * Type returned from addLibrary
+ */
+export class Library {
+	/** The name of the library */
+	readonly name: string;
+
+	/** The binary built by the development build system */
+	readonly binary: IBuildPath;
+
+	// TODO - reconcile this w/ CMake's concept of import library
+	/** On Windows, the import library */
+	readonly importLibrary?: IBuildPath;
+
+	/** The type of the library */
+	readonly type: ResolvedLibraryType;
+
+	private _includes: Path[] = [];
+	private _libs: Library[] = [];
+
+	constructor(
+		name: string,
+		type: ResolvedLibraryType,
+		includes: Path[],
+		libs: Library[],
+		binary: IBuildPath,
+		importLib?: IBuildPath,
+	) {
+		this.name = name;
+		this.type = type;
+		this._includes = includes;
+		this._libs = libs;
+		this.binary = binary;
+		this.importLibrary = importLib;
+	}
+
+	/** The directories directly included by the library */
+	includes(): Path[] {
+		return this._includes;
+	}
+
+	/** The libraries, local to the distribution, that are
+	 * directly linked to this library. Does not include
+	 * external libraries from findPackage
+	 */
+	linkedLibraries(): Library[] {
+		return this._libs;
+	}
+}
+
 export interface ILinkedCompilation {
 	name: string;
 	outDir: IBuildPath;
@@ -101,10 +159,6 @@ export interface ILibrary extends ILinkedCompilation {
 	type: ResolvedLibraryType;
 }
 
-export interface IImportedLibrary {
-	name: string;
-}
-
 export function makeLibrary(
 	lib: ILibrary,
 	binary: IBuildPath,
@@ -120,41 +174,6 @@ export function makeLibrary(
 	);
 
 	return out;
-}
-
-export class Library {
-	readonly name: string;
-	readonly binary: IBuildPath;
-	// TODO - reconcile this w/ CMake's concept of import library
-	readonly importLibrary?: IBuildPath;
-	readonly type: ResolvedLibraryType;
-
-	private _includes: Path[] = [];
-	private _libs: Library[] = [];
-
-	constructor(
-		name: string,
-		type: ResolvedLibraryType,
-		includes: Path[],
-		libs: Library[],
-		binary: IBuildPath,
-		importLib?: IBuildPath,
-	) {
-		this.name = name;
-		this.type = type;
-		this._includes = includes;
-		this._libs = libs;
-		this.binary = binary;
-		this.importLibrary = importLib;
-	}
-
-	includes(): Path[] {
-		return this._includes;
-	}
-
-	linkedLibraries(): Library[] {
-		return this._libs;
-	}
 }
 
 export function isImported(

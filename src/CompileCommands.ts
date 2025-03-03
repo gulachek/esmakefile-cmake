@@ -70,6 +70,10 @@ export async function dumpCompileCommands(
 	await writeFile(jsonAbs, JSON.stringify(cmds), 'utf8');
 }
 
+/**
+ * Generate a compile_commands.json database for clangd
+ * language server support
+ */
 export function addCompileCommands(
 	make: Makefile,
 	...dists: Distribution[]
