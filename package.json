@@ -1,6 +1,6 @@
 {
 	"name": "esmakefile-cmake",
-	"version": "0.1.0",
+	"version": "0.1.1",
 	"description": "Integrate esmakefile with CMake",
 	"type": "module",
 	"exports": "./dist/index.js",
@@ -8,10 +8,7 @@
 		"build": "tsc",
 		"test": "mocha dist/spec"
 	},
-	"repository": {
-		"type": "git",
-		"url": "git+https://github.com/gulachek/esmakefile-cmake.git"
-	},
+	"repository": "github:gulachek/esmakefile-cmake",
 	"keywords": [
 		"esmakefile",
 		"cmake"

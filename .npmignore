@@ -1,0 +1,12 @@
+node_modules
+.github
+project.vim
+vim
+scratch
+esmakefile-cmake-*.tgz
+.prettier*
+install-thoughts.txt
+tsconfig.json
+types/spec
+src/spec
+dist/spec
