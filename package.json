@@ -8,10 +8,7 @@
 		"build": "tsc",
 		"test": "mocha dist/spec"
 	},
-	"repository": {
-		"type": "git",
-		"url": "git+https://github.com/gulachek/esmakefile-cmake.git"
-	},
+	"repository": "github:gulachek/esmakefile-cmake",
 	"keywords": [
 		"esmakefile",
 		"cmake"
