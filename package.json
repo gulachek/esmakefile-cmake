@@ -6,7 +6,9 @@
 	"exports": "./dist/index.js",
 	"scripts": {
 		"build": "tsc",
-		"test": "mocha dist/spec"
+		"test": "mocha dist/spec",
+		"archive-src": "git archive HEAD -o source.tgz",
+		"prepack": "npm run archive-src && tsc"
 	},
 	"repository": "github:gulachek/esmakefile-cmake",
 	"keywords": [
@@ -24,6 +26,7 @@
 		"@types/mocha": "^10.0.10",
 		"@types/node": "^22.12.0",
 		"chai": "^5.1.2",
+		"esbuild": "^0.25.0",
 		"mocha": "^11.1.0",
 		"prettier": "^3.4.2",
 		"typescript": "^5.7.3"
