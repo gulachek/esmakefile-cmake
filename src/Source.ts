@@ -18,7 +18,10 @@
  */
 import { Path } from 'esmakefile';
 
+/** C language versions, like CMAKE_C_STANDARD */
 export type CStandard = 90 | 99 | 11 | 17 | 23;
+
+/** C++ language versions, like CMAKE_CXX_STANDARD */
 export type CxxStandard = 98 | 11 | 14 | 17 | 20 | 23 | 26;
 
 // TODO - unit test the crap out of this. File extensions

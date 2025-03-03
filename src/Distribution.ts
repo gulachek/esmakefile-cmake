@@ -37,36 +37,77 @@ import { readFileSync } from 'node:fs';
 import { PkgConfig } from 'espkg-config';
 import { dirname, resolve } from 'node:path';
 
+/**
+ * Options to create a Distribution
+ */
 export interface IDistributionOpts {
+	/** The name of the distribution, as given to CMake project() */
 	name: string;
+
+	/** The version of the distribution, as given to CMake project() */
 	version: string;
+
+	/** The C language version, like CMAKE_C_STANDARD */
 	cStd?: CStandard;
+
+	/** The C++ language version, like CMAKE_CXX_STANDARD */
 	cxxStd?: CxxStandard;
 }
 
+/**
+ * Options for addExecutable
+ */
 export interface IAddExecutableOpts {
+	/** Name of executable */
 	name: string;
+
+	/** Source C/C++ files */
 	src: PathLike[];
+
+	/** Directories to include in header search paths */
 	includeDirs?: PathLike[];
+
+	/** Libraries to link to */
 	linkTo?: (Library | IImportedLibrary)[];
 }
 
+/**
+ * Options for addTest
+ */
 export interface IAddTestOpts extends IAddExecutableOpts {}
 
+/**
+ * Type returned from addTest
+ */
 export interface ITest {
+	/** Target that, when updated, runs the test executable */
 	run: IBuildPath;
 }
 
+/**
+ * Library type given to addLibrary
+ */
 export enum LibraryType {
+	/** The default - static by default and respect CMake BUILD_SHARED_LIBS */
 	default = 'default',
+
+	/** Always build a static library */
 	static = 'static',
+
+	/** Always build a dynamic library */
 	dynamic = 'dynamic',
 }
 
+/** Options given to addLibrary */
 export interface IAddLibraryOpts extends IAddExecutableOpts {
+	/** Specify the type of the library */
 	type?: LibraryType;
 }
 
+/**
+ * Class that represents a packaged distribution of C/C++
+ * libraries and executables
+ */
 export class Distribution {
 	readonly make: Makefile;
 	readonly name: string;
@@ -199,10 +240,16 @@ export class Distribution {
 		return out;
 	}
 
+	/**
+	 * Add an executable like CMake's add_executable
+	 */
 	addExecutable(opts: IAddExecutableOpts): Executable {
 		return this._addExecutable(opts, false);
 	}
 
+	/**
+	 * Add a test executable and run
+	 */
 	addTest(opts: IAddTestOpts): ITest {
 		const exe = this._addExecutable(opts, true);
 
@@ -216,6 +263,9 @@ export class Distribution {
 		return { run };
 	}
 
+	/**
+	 * Add a library like CMake's add_library
+	 */
 	addLibrary(opts: IAddLibraryOpts): Library {
 		// TODO validate opts
 		const lib: ILibrary = {
@@ -231,15 +281,32 @@ export class Distribution {
 		return out;
 	}
 
+	/**
+	 * Install a target. Not 1:1 with CMake's install().
+	 * For executables, will install the binary to the
+	 * bin folder. For libraries, it will install binaries
+	 * to lib and bin folders as appropriate (bin for
+	 * Windows' DLL). In addition, libraries will have
+	 * packages usable by find_package installed to
+	 * lib/cmake/<name>/<name>-config.cmake, and a pkgconfig
+	 * file will be installed to lib/pkgconfig/<name>.pc.
+	 */
 	install(target: Executable | Library): void {
 		this._installedTargets.push(target.name);
 	}
 
+	/**
+	 * Find an external package to link to. At development
+	 * time, this will search pkgconfig in vendor/lib/pkgconfig
+	 * relative to the esmakefile srcRoot. In the distribution,
+	 * it will result in a required find_package() statement
+	 * to find a CMake module to link to.
+	 */
 	findPackage(name: string): IImportedLibrary {
 		return { name };
 	}
 
-	/** clangd compilation databases for all libraries/executables. Should be merged for development environment */
+	/** clangd compilation databases for all libraries/executables. Use addCompileCommands instead. */
 	compileCommandsComponents(): IBuildPath[] {
 		const out: IBuildPath[] = [];
 		for (const e of this._executables) out.push(e.compileCommands);
