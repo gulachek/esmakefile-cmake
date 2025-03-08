@@ -154,12 +154,16 @@ export class GccCompiler implements ICompiler {
 					deps,
 				]);
 
+				if (!result) {
+					return false;
+				}
+
 				const depfileContents = await readFile(deps, 'utf8');
 				for (const p of parsePrereqs(depfileContents)) {
 					args.addPostreq(p);
 				}
 
-				return result;
+				return true;
 			});
 		}
 
