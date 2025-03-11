@@ -1049,6 +1049,8 @@ describe('Distribution', function () {
 			d.addTest({
 				name: 'unit_test',
 				src: ['src/unit_test.c'],
+				// This makes sure that distribution doesn't do
+				// find_package on unit test dependencies
 				linkTo: [notFound],
 			});
 
