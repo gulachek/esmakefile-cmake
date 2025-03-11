@@ -1164,7 +1164,7 @@ describe('Distribution', function () {
 
 			await writePath(
 				'CMakeLists.txt',
-				'cmake_minimum_required(VERSION 3.8)',
+				'cmake_minimum_required(VERSION 3.10)',
 				'project(Test)',
 				'find_package(add REQUIRED)',
 				'add_executable(print src/print.c)',
