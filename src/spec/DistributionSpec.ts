@@ -25,7 +25,7 @@ import {
 	Path,
 	BuildPathLike,
 } from 'esmakefile';
-import { mkdir, rm, writeFile } from 'node:fs/promises';
+import { mkdir, rm, writeFile, rename } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { platform } from 'node:os';
@@ -144,12 +144,13 @@ describe('Distribution', function () {
 			'-B',
 			stageDir,
 			'-S',
-			join(testDir, 'test-1.2.3'),
+			join(testDir, `${d.name}-${d.version}`),
 			`-DCMAKE_PREFIX_PATH=${vendorDir}`,
 		]);
 		// Specify config b.c. default for MS is Debug for --build and Release for --install
 		await run('cmake', ['--build', stageDir, '--config', 'Release']);
 		await run('cmake', ['--install', stageDir, '--prefix', vendorDir]);
+		await rm(stageDir, { recursive: true });
 	}
 
 	describe('development', () => {
@@ -985,22 +986,11 @@ describe('Distribution', function () {
 				'target_compile_definitions(zero INTERFACE ZERO=0)',
 			);
 
-			// add a silly package in pkg-config and cmake that
-			// defines ONE
+			await writePath('include/one.h', ...defineExport, 'EXPORT int one();');
 			await writePath(
-				'vendor/lib/pkgconfig/libone.pc',
-				'Name: one',
-
-				'Version: 1',
-				'Description: uno',
-				'Cflags: -DONE=1',
-			);
-
-			await mkdir(join(cmakeDir, 'one'));
-			await writePath(
-				'vendor/lib/cmake/one/one-config.cmake',
-				'add_library(one INTERFACE)',
-				'target_compile_definitions(one INTERFACE ONE=1)',
+				'src/one.c',
+				'#include "one.h"',
+				'int one() { return 1; }',
 			);
 
 			await writePath(
@@ -1020,7 +1010,8 @@ describe('Distribution', function () {
 			await writePath(
 				'src/add.c',
 				'#include "add.h"',
-				'int add(int a, int b) { return ONE * (a + b); }',
+				'#include <one.h>',
+				'int add(int a, int b) { return one() * (a + b); }',
 			);
 
 			await writePath('src/unit_test.c', 'int main() { return 0; }');
@@ -1036,6 +1027,28 @@ describe('Distribution', function () {
 					'}',
 				);
 			});
+
+			const upstreamDist = new Distribution(make, {
+				name: 'upstream',
+				version: '0.1.2',
+				cStd: 11,
+				cxxStd: 20,
+			});
+
+			const oneLib = upstreamDist.addLibrary({
+				name: 'one',
+				src: ['src/one.c'],
+			});
+
+			upstreamDist.install(oneLib);
+
+			await install(upstreamDist);
+
+			// demonstrate we can decouple pkgconfig/cmake names
+			await rename(
+				'vendor/lib/pkgconfig/one.pc',
+				'vendor/lib/pkgconfig/libone.pc',
+			);
 
 			const d = new Distribution(make, {
 				name: 'test',
@@ -1198,5 +1211,13 @@ const cxxLangMacro = [
 	'#define CXXLANG _MSVC_LANG',
 	'#else',
 	'#define CXXLANG __cplusplus',
+	'#endif',
+];
+
+const defineExport = [
+	'#ifdef _WIN32',
+	'#define EXPORT __declspec(dllexport)',
+	'#else',
+	'#define EXPORT',
 	'#endif',
 ];
