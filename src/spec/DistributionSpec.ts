@@ -985,6 +985,24 @@ describe('Distribution', function () {
 				'target_compile_definitions(zero INTERFACE ZERO=0)',
 			);
 
+			// add a silly package in pkg-config and cmake that
+			// defines ONE
+			await writePath(
+				'vendor/lib/pkgconfig/libone.pc',
+				'Name: one',
+
+				'Version: 1',
+				'Description: uno',
+				'Cflags: -DONE=1',
+			);
+
+			await mkdir(join(cmakeDir, 'one'));
+			await writePath(
+				'vendor/lib/cmake/one/one-config.cmake',
+				'add_library(one INTERFACE)',
+				'target_compile_definitions(one INTERFACE ONE=1)',
+			);
+
 			await writePath(
 				'src/printv.c',
 				'#include <stdio.h>',
@@ -1002,7 +1020,7 @@ describe('Distribution', function () {
 			await writePath(
 				'src/add.c',
 				'#include "add.h"',
-				'int add(int a, int b) { return a + b; }',
+				'int add(int a, int b) { return ONE * (a + b); }',
 			);
 
 			await writePath('src/unit_test.c', 'int main() { return 0; }');
@@ -1030,6 +1048,10 @@ describe('Distribution', function () {
 
 			const notFound = d.findPackage('not-found');
 			const zero = d.findPackage('zero');
+			const one = d.findPackage({
+				pkgconfig: 'libone',
+				cmake: 'one',
+			});
 
 			const printv = d.addExecutable({
 				name: 'printv',
@@ -1044,6 +1066,7 @@ describe('Distribution', function () {
 			const add = d.addLibrary({
 				name: 'add',
 				src: ['src/add.c'],
+				linkTo: [one],
 			});
 
 			d.addTest({
