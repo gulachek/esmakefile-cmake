@@ -326,9 +326,9 @@ export class Distribution {
 	findPackage(opts: IFindPackageOpts): IImportedLibrary;
 	findPackage(nameOrOpts: string | IFindPackageOpts): IImportedLibrary {
 		if (typeof nameOrOpts === 'string') {
-			return { name: nameOrOpts };
+			return { pkgconfig: nameOrOpts, cmake: nameOrOpts };
 		} else {
-			return { name: nameOrOpts.pkgconfig || '' };
+			return nameOrOpts;
 		}
 	}
 
@@ -416,7 +416,15 @@ export class Distribution {
 
 			for (const c of targets) {
 				for (const p of c.pkgs) {
-					pkgNames.add(p.name);
+					const { cmake, pkgconfig } = p;
+					if (!cmake) {
+						args.logStream.write(
+							`'${c.name}' depends on a package without a cmake lookup name defined in findPackage (pkgconfig name: '${pkgconfig}')`,
+						);
+						return false;
+					}
+
+					pkgNames.add(cmake);
 				}
 
 				// Copy all includes into dist/include
@@ -461,9 +469,8 @@ export class Distribution {
 					cmake.push(`target_include_directories(${exe.name} PRIVATE include)`);
 				}
 
-				// TODO do this for libs too
 				for (const p of exe.pkgs) {
-					cmake.push(`target_link_libraries(${exe.name} PRIVATE ${p.name})`);
+					cmake.push(`target_link_libraries(${exe.name} PRIVATE ${p.cmake})`);
 				}
 
 				cmake.push(`install(TARGETS ${exe.name})`);
@@ -496,6 +503,10 @@ export class Distribution {
 						'$<INSTALL_INTERFACE:include>',
 						')',
 					);
+				}
+
+				for (const p of lib.pkgs) {
+					cmake.push(`target_link_libraries(${lib.name} PRIVATE ${p.cmake})`);
 				}
 
 				// Install .pc file

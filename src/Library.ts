@@ -23,7 +23,8 @@ import { IBuildPath, Path } from 'esmakefile';
  * NOW. WILL LIKELY CHANGE
  */
 export interface IImportedLibrary {
-	name: string;
+	pkgconfig?: string;
+	cmake?: string;
 }
 
 /**
@@ -135,7 +136,14 @@ export function allPkgDeps(c: ILinkedCompilation): IPkgDeps {
 	}
 
 	for (const p of c.pkgs) {
-		names.push(p.name);
+		const { pkgconfig, cmake } = p;
+		if (!pkgconfig) {
+			throw new Error(
+				`'${c.name}' is linked to a findPackage that has no pkgconfig name specified (cmake: '${cmake}')`,
+			);
+		}
+
+		names.push(pkgconfig);
 	}
 
 	const prereqs: Path[] = [];
