@@ -23,6 +23,7 @@ export {
 	IAddLibraryOpts,
 	IAddExecutableOpts,
 	IAddTestOpts,
+	IFindPackageOpts,
 	ITest,
 } from './Distribution.js';
 export { Executable } from './Executable.js';

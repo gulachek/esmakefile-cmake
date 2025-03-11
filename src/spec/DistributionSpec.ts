@@ -578,6 +578,76 @@ describe('Distribution', function () {
 			await expectOutput(test.binary, '2+2=4');
 		});
 
+		it('can specify an external package for linking differently between pkgconfig and cmake', async () => {
+			await mkdir(join(testDir, 'dep', 'include'), { recursive: true });
+			await mkdir(join(testDir, 'dep', 'src'));
+			await mkdir(pkgconfigDir, { recursive: true });
+
+			const dep = new Distribution(make, {
+				name: 'dep',
+				version: '2.3.4',
+			});
+
+			await writePath('dep/include/add.h', 'int add(int a, int b);');
+
+			await writePath(
+				'dep/src/add.c',
+				'#include "add.h"',
+				'int add(int a, int b){ return a + b; }',
+			);
+
+			const add = dep.addLibrary({
+				name: 'add',
+				src: ['dep/src/add.c'],
+				includeDirs: ['dep/include'],
+			});
+
+			await updateTarget(make, add.binary);
+
+			const depInclude = make.abs(Path.src('dep/include'));
+			const libDir = make.abs(add.binary.dir());
+			let cflags = `-I${depInclude}`;
+			let libs = `-L${libDir} -ladd`;
+			if (platform() === 'win32') {
+				cflags = `/I${depInclude.replace(/\\/g, '\\\\')}`;
+				libs = make.abs(add.binary).replace(/\\/g, '\\\\');
+			}
+
+			await writePath(
+				'vendor/lib/pkgconfig/add.pc',
+				'Name: add',
+				'Version: 2.3.4',
+				'Description: add two integers',
+				`Cflags: ${cflags}`,
+				`Libs: ${libs}`,
+			);
+
+			const d = new Distribution(make, {
+				name: 'test',
+				version: '1.2.3',
+			});
+
+			const addPkg = d.findPackage({
+				pkgconfig: 'add',
+				cmake: 'not-used-in-test',
+			});
+
+			await writePath(
+				'src/test.c',
+				'#include <add.h>',
+				'#include <stdio.h>',
+				'int main() { printf("2+2=%d", add(2,2)); return 0; }',
+			);
+
+			const test = d.addExecutable({
+				name: 'test',
+				src: ['src/test.c'],
+				linkTo: [addPkg],
+			});
+
+			await expectOutput(test.binary, '2+2=4');
+		});
+
 		it('can find an external package for linking to a library', async () => {
 			await mkdir(join(testDir, 'dep', 'include'), { recursive: true });
 			await mkdir(join(testDir, 'dep', 'src'));

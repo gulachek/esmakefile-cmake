@@ -104,6 +104,15 @@ export interface IAddLibraryOpts extends IAddExecutableOpts {
 	type?: LibraryType;
 }
 
+/** Options given to findPackage */
+export interface IFindPackageOpts {
+	/** The name of the pkgconfig package to link at development time */
+	pkgconfig?: string;
+
+	/** The name of the cmake package to link in the distribution */
+	cmake?: string;
+}
+
 /**
  * Class that represents a packaged distribution of C/C++
  * libraries and executables
@@ -301,9 +310,26 @@ export class Distribution {
 	 * relative to the esmakefile srcRoot. In the distribution,
 	 * it will result in a required find_package() statement
 	 * to find a CMake module to link to.
+	 * @param name The name of the pkgconfig and cmake package to link to
+	 * @returns An object that can be given to a linkTo option
 	 */
-	findPackage(name: string): IImportedLibrary {
-		return { name };
+	findPackage(name: string): IImportedLibrary;
+	/**
+	 * Find an external package to link to. At development
+	 * time, this will search pkgconfig in vendor/lib/pkgconfig
+	 * relative to the esmakefile srcRoot. In the distribution,
+	 * it will result in a required find_package() statement
+	 * to find a CMake module to link to.
+	 * @param opts Options to specify which package to link to
+	 * @returns An object that can be given to a linkTo option
+	 */
+	findPackage(opts: IFindPackageOpts): IImportedLibrary;
+	findPackage(nameOrOpts: string | IFindPackageOpts): IImportedLibrary {
+		if (typeof nameOrOpts === 'string') {
+			return { name: nameOrOpts };
+		} else {
+			return { name: nameOrOpts.pkgconfig || '' };
+		}
 	}
 
 	/** clangd compilation databases for all libraries/executables. Use addCompileCommands instead. */
