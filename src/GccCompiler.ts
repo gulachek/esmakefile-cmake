@@ -190,7 +190,9 @@ export class GccCompiler implements ICompiler {
 
 				const objsAbs = args.absAll(...objs);
 
-				const { flags: pkgLibs } = await this._pkg.libs(pkgDeps.names);
+				const { flags: pkgLibs } = await this._pkg.libs(pkgDeps.names, {
+					static: true,
+				});
 
 				const flags: string[] = [];
 				if (isLib) {
@@ -244,11 +246,7 @@ export class GccCompiler implements ICompiler {
 			contents.push(`Libs: ${libs}`);
 
 			const reqs = pkgDeps.names.join(' ');
-			if (lib.type === ResolvedLibraryType.dynamic) {
-				contents.push(`Requires.private: ${reqs}`);
-			} else {
-				contents.push(`Requires: ${reqs}`);
-			}
+			contents.push(`Requires.private: ${reqs}`);
 
 			await writeFile(args.abs(pcFile), contents.join('\n'), 'utf8');
 		});

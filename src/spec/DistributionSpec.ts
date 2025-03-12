@@ -25,7 +25,7 @@ import {
 	Path,
 	BuildPathLike,
 } from 'esmakefile';
-import { mkdir, rm, writeFile } from 'node:fs/promises';
+import { mkdir, rm, writeFile, rename } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { platform } from 'node:os';
@@ -144,12 +144,13 @@ describe('Distribution', function () {
 			'-B',
 			stageDir,
 			'-S',
-			join(testDir, 'test-1.2.3'),
+			join(testDir, `${d.name}-${d.version}`),
 			`-DCMAKE_PREFIX_PATH=${vendorDir}`,
 		]);
 		// Specify config b.c. default for MS is Debug for --build and Release for --install
 		await run('cmake', ['--build', stageDir, '--config', 'Release']);
 		await run('cmake', ['--install', stageDir, '--prefix', vendorDir]);
+		await rm(stageDir, { recursive: true });
 	}
 
 	describe('development', () => {
@@ -508,171 +509,152 @@ describe('Distribution', function () {
 			await expectOutput(test.binary, '4');
 		});
 
-		it('can find an external package for linking', async () => {
-			// General strategy - build one distribution and hand-craft
-			// pkgconfig file to that distribution's build. Can test
-			// generation of installed pkgconfig in installation tests
-			await mkdir(join(testDir, 'dep', 'include'), { recursive: true });
-			await mkdir(join(testDir, 'dep', 'src'));
-			await mkdir(pkgconfigDir, { recursive: true });
+		describe('external packages', () => {
+			beforeEach(async () => {
+				// General strategy - build one distribution and hand-craft
+				// pkgconfig file to that distribution's build. Can test
+				// generation of installed pkgconfig in installation tests
+				await mkdir(join(testDir, 'dep', 'include'), { recursive: true });
+				await mkdir(join(testDir, 'dep', 'src'));
+				await mkdir(pkgconfigDir, { recursive: true });
 
-			const dep = new Distribution(make, {
-				name: 'dep',
-				version: '2.3.4',
+				const dep = new Distribution(make, {
+					name: 'dep',
+					version: '2.3.4',
+				});
+
+				await writePath('dep/include/add.h', 'int add(int a, int b);');
+
+				await writePath(
+					'dep/src/add.c',
+					'#include "add.h"',
+					'int add(int a, int b){ return a + b; }',
+				);
+
+				const add = dep.addLibrary({
+					name: 'add',
+					src: ['dep/src/add.c'],
+					includeDirs: ['dep/include'],
+				});
+
+				await updateTarget(make, add.binary);
+
+				const depInclude = make.abs(Path.src('dep/include'));
+				const libDir = make.abs(add.binary.dir());
+				let cflags = `-I${depInclude}`;
+				let libs = `-L${libDir} -ladd`;
+				if (platform() === 'win32') {
+					cflags = `/I${depInclude.replace(/\\/g, '\\\\')}`;
+					libs = make.abs(add.binary).replace(/\\/g, '\\\\');
+				}
+
+				await writePath(
+					'vendor/lib/pkgconfig/add.pc',
+					'Name: add',
+					'Version: 2.3.4',
+					'Description: add two integers',
+					`Cflags: ${cflags}`,
+					`Libs: ${libs}`,
+				);
+
+				await writePath(
+					'src/test.c',
+					'#include <add.h>',
+					'#include <stdio.h>',
+					'int main() { printf("2+2=%d", add(2,2)); return 0; }',
+				);
 			});
 
-			await writePath('dep/include/add.h', 'int add(int a, int b);');
+			it('can find an external package for linking', async () => {
+				const d = new Distribution(make, {
+					name: 'test',
+					version: '1.2.3',
+				});
 
-			await writePath(
-				'dep/src/add.c',
-				'#include "add.h"',
-				'int add(int a, int b){ return a + b; }',
-			);
+				const addPkg = d.findPackage('add');
 
-			const add = dep.addLibrary({
-				name: 'add',
-				src: ['dep/src/add.c'],
-				includeDirs: ['dep/include'],
+				const test = d.addExecutable({
+					name: 'test',
+					src: ['src/test.c'],
+					linkTo: [addPkg],
+				});
+
+				await expectOutput(test.binary, '2+2=4');
 			});
 
-			await updateTarget(make, add.binary);
+			it('can specify an external package for linking differently between pkgconfig and cmake', async () => {
+				const d = new Distribution(make, {
+					name: 'test',
+					version: '1.2.3',
+				});
 
-			const depInclude = make.abs(Path.src('dep/include'));
-			const libDir = make.abs(add.binary.dir());
-			let cflags = `-I${depInclude}`;
-			let libs = `-L${libDir} -ladd`;
-			if (platform() === 'win32') {
-				cflags = `/I${depInclude.replace(/\\/g, '\\\\')}`;
-				libs = make.abs(add.binary).replace(/\\/g, '\\\\');
-			}
+				const addPkg = d.findPackage({
+					pkgconfig: 'add',
+					cmake: 'not-used-in-test',
+				});
 
-			await writePath(
-				'vendor/lib/pkgconfig/add.pc',
-				'Name: add',
-				'Version: 2.3.4',
-				'Description: add two integers',
-				`Cflags: ${cflags}`,
-				`Libs: ${libs}`,
-			);
+				const test = d.addExecutable({
+					name: 'test',
+					src: ['src/test.c'],
+					linkTo: [addPkg],
+				});
 
-			const d = new Distribution(make, {
-				name: 'test',
-				version: '1.2.3',
+				await expectOutput(test.binary, '2+2=4');
 			});
 
-			const addPkg = d.findPackage('add');
+			it('can find an external package for linking to a library', async () => {
+				const d = new Distribution(make, {
+					name: 'test',
+					version: '1.2.3',
+				});
 
-			await writePath(
-				'src/test.c',
-				'#include <add.h>',
-				'#include <stdio.h>',
-				'int main() { printf("2+2=%d", add(2,2)); return 0; }',
-			);
+				const addPkg = d.findPackage('add');
 
-			const test = d.addExecutable({
-				name: 'test',
-				src: ['src/test.c'],
-				linkTo: [addPkg],
+				await writePath(
+					'include/mul.h',
+					'#ifdef _WIN32',
+					'#define EXPORT __declspec(dllexport)',
+					'#else',
+					'#define EXPORT',
+					'#endif',
+					'EXPORT int mul(int a, int b);',
+				);
+
+				await writePath(
+					'src/mul.c',
+					'#include "mul.h"',
+					'#include <add.h>',
+					'int mul(int a, int b) {',
+					' int sum = 0;',
+					' for(int i = 0; i < a; ++i) {',
+					'  sum = add(sum, b);',
+					' }',
+					' return sum;',
+					'}',
+				);
+
+				await writePath(
+					'src/test.c',
+					'#include "mul.h"',
+					'#include <stdio.h>',
+					'int main() { printf("2*3=%d", mul(2,3)); return 0; }',
+				);
+
+				const mul = d.addLibrary({
+					name: 'mul',
+					src: ['src/mul.c'],
+					linkTo: [addPkg],
+					type: LibraryType.dynamic,
+				});
+
+				const test = d.addExecutable({
+					name: 'test',
+					src: ['src/test.c'],
+					linkTo: [mul],
+				});
+
+				await expectOutput(test.binary, '2*3=6');
 			});
-
-			await expectOutput(test.binary, '2+2=4');
-		});
-
-		it('can find an external package for linking to a library', async () => {
-			await mkdir(join(testDir, 'dep', 'include'), { recursive: true });
-			await mkdir(join(testDir, 'dep', 'src'));
-			await mkdir(pkgconfigDir, { recursive: true });
-
-			const dep = new Distribution(make, {
-				name: 'dep',
-				version: '2.3.4',
-			});
-
-			await writePath('dep/include/add.h', 'int add(int a, int b);');
-
-			await writePath(
-				'dep/src/add.c',
-				'#include "add.h"',
-				'int add(int a, int b){ return a + b; }',
-			);
-
-			const add = dep.addLibrary({
-				name: 'add',
-				src: ['dep/src/add.c'],
-				includeDirs: ['dep/include'],
-			});
-
-			await updateTarget(make, add.binary);
-
-			const depInclude = make.abs(Path.src('dep/include'));
-			const libDir = make.abs(add.binary.dir());
-			let cflags = `-I${depInclude}`;
-			let libs = `-L${libDir} -ladd`;
-			if (platform() === 'win32') {
-				cflags = `/I${depInclude.replace(/\\/g, '\\\\')}`;
-				libs = make.abs(add.binary).replace(/\\/g, '\\\\');
-			}
-
-			await writePath(
-				'vendor/lib/pkgconfig/add.pc',
-				'Name: add',
-				'Version: 2.3.4',
-				'Description: add two integers',
-				`Cflags: ${cflags}`,
-				`Libs: ${libs}`,
-			);
-
-			const d = new Distribution(make, {
-				name: 'test',
-				version: '1.2.3',
-			});
-
-			const addPkg = d.findPackage('add');
-
-			await writePath(
-				'include/mul.h',
-				'#ifdef _WIN32',
-				'#define EXPORT __declspec(dllexport)',
-				'#else',
-				'#define EXPORT',
-				'#endif',
-				'EXPORT int mul(int a, int b);',
-			);
-
-			await writePath(
-				'src/mul.c',
-				'#include "mul.h"',
-				'#include <add.h>',
-				'int mul(int a, int b) {',
-				' int sum = 0;',
-				' for(int i = 0; i < a; ++i) {',
-				'  sum = add(sum, b);',
-				' }',
-				' return sum;',
-				'}',
-			);
-
-			await writePath(
-				'src/test.c',
-				'#include "mul.h"',
-				'#include <stdio.h>',
-				'int main() { printf("2*3=%d", mul(2,3)); return 0; }',
-			);
-
-			const mul = d.addLibrary({
-				name: 'mul',
-				src: ['src/mul.c'],
-				linkTo: [addPkg],
-				type: LibraryType.dynamic,
-			});
-
-			const test = d.addExecutable({
-				name: 'test',
-				src: ['src/test.c'],
-				linkTo: [mul],
-			});
-
-			await expectOutput(test.binary, '2*3=6');
 		});
 
 		it('can add a unit test executable', async () => {
@@ -1004,6 +986,13 @@ describe('Distribution', function () {
 				'target_compile_definitions(zero INTERFACE ZERO=0)',
 			);
 
+			await writePath('include/one.h', ...defineExport, 'EXPORT int one();');
+			await writePath(
+				'src/one.c',
+				'#include "one.h"',
+				'int one() { return 1; }',
+			);
+
 			await writePath(
 				'src/printv.c',
 				'#include <stdio.h>',
@@ -1021,7 +1010,8 @@ describe('Distribution', function () {
 			await writePath(
 				'src/add.c',
 				'#include "add.h"',
-				'int add(int a, int b) { return a + b; }',
+				'#include <one.h>',
+				'int add(int a, int b) { return one() * (a + b); }',
 			);
 
 			await writePath('src/unit_test.c', 'int main() { return 0; }');
@@ -1038,6 +1028,28 @@ describe('Distribution', function () {
 				);
 			});
 
+			const upstreamDist = new Distribution(make, {
+				name: 'upstream',
+				version: '0.1.2',
+				cStd: 11,
+				cxxStd: 20,
+			});
+
+			const oneLib = upstreamDist.addLibrary({
+				name: 'one',
+				src: ['src/one.c'],
+			});
+
+			upstreamDist.install(oneLib);
+
+			await install(upstreamDist);
+
+			// demonstrate we can decouple pkgconfig/cmake names
+			await rename(
+				'vendor/lib/pkgconfig/one.pc',
+				'vendor/lib/pkgconfig/libone.pc',
+			);
+
 			const d = new Distribution(make, {
 				name: 'test',
 				version: '1.2.3',
@@ -1049,6 +1061,10 @@ describe('Distribution', function () {
 
 			const notFound = d.findPackage('not-found');
 			const zero = d.findPackage('zero');
+			const one = d.findPackage({
+				pkgconfig: 'libone',
+				cmake: 'one',
+			});
 
 			const printv = d.addExecutable({
 				name: 'printv',
@@ -1063,11 +1079,14 @@ describe('Distribution', function () {
 			const add = d.addLibrary({
 				name: 'add',
 				src: ['src/add.c'],
+				linkTo: [one],
 			});
 
 			d.addTest({
 				name: 'unit_test',
 				src: ['src/unit_test.c'],
+				// This makes sure that distribution doesn't do
+				// find_package on unit test dependencies
 				linkTo: [notFound],
 			});
 
@@ -1192,5 +1211,13 @@ const cxxLangMacro = [
 	'#define CXXLANG _MSVC_LANG',
 	'#else',
 	'#define CXXLANG __cplusplus',
+	'#endif',
+];
+
+const defineExport = [
+	'#ifdef _WIN32',
+	'#define EXPORT __declspec(dllexport)',
+	'#else',
+	'#define EXPORT',
 	'#endif',
 ];
