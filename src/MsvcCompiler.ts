@@ -156,7 +156,9 @@ export class MsvcCompiler implements ICompiler {
 			async (args) => {
 				const objsAbs = args.absAll(...objs);
 
-				const { flags: pkgLibs } = await this._pkg.libs(pkgDeps.names);
+				const { flags: pkgLibs } = await this._pkg.libs(pkgDeps.names, {
+					static: true,
+				});
 
 				return args.spawn(this.cc, [
 					...flags,
@@ -224,11 +226,7 @@ export class MsvcCompiler implements ICompiler {
 			contents.push(`Libs: ${importPath}`);
 
 			const reqs = pkgDeps.names.join(' ');
-			if (lib.type === ResolvedLibraryType.dynamic) {
-				contents.push(`Requires.private: ${reqs}`);
-			} else {
-				contents.push(`Requires: ${reqs}`);
-			}
+			contents.push(`Requires.private: ${reqs}`);
 
 			await writeFile(args.abs(pcFile), contents.join('\r\n'), 'utf8');
 		});

@@ -73,3 +73,53 @@ For more detailed information, see `src/spec/DistributionSpec.ts` and
 `src/index.ts` along with the exported classes and their documentation
 for more specifics. Eventually, there should be stronger documentation
 than this, but this will have to do until that happens.
+
+## Linking External Packages
+
+One complex area of any build system is integrating external
+code outside of the project. `esmakefile-cmake` handles this
+with the `Distribution`'s `findPackage` function which is
+given a package name to be looked up at development time via
+`pkg-config` and in the distribution's `CMakeLists.txt` file
+via `find_package`.
+
+### Limitations
+
+For the development builds, it's worth noting that all
+library links, both from `addLibrary` and `findPackage`,
+use `pkg-config` to compute necessary compiler and
+linker flags. This is largely to avoid redesigning a
+solution to the problem that `pkg-config` already
+solves. For libraries created with `addLibrary`, a
+generated `.pc` file will contain the `Cflags` and
+`Libs` flags to link to the library.
+The file will also have a `Requires.private`
+field listing all dependencies directly given to `linkTo`.
+For each link of an executable or dynamic library, there
+is a single invocation to `pkg-config --libs --static` that is
+given all of the _direct_ dependencies given to
+`linkTo`, and `pkg-config` computes the flags necessary
+for the _transitive_ dependencies. The reader may notice
+that this results in unnecessary libraries being listed
+as link flags when dynamic libraries are involved, since
+the `--static` behavior will traverse the
+`Requires.private` dependencies for linking, yet dynamic
+libraries already have their dependencies linked to
+them, rendering this unnecessary. **In the worst case, an
+extra library containing a conflicting symbol could be
+linked into an image instead of the library intended to
+provide this symbol.** This is not expected to be a
+common issue, though it is possible, and the user will
+either need to rename symbols to avoid conflicts or
+potentially handwrite one or more `.pc` files to
+explicitly configure the link. The reason this
+`--static` flag is necessary is because dynamic and
+static libraries can coexist in the builds, and by not
+listing transitive dependencies for static libraries,
+the reverse problem will exist, meaning some necessary
+libraries will be omitted, which breaks links and is
+expected to be far worse than the limitation listed
+above. While tailored solutions inspecting library types
+and which flags to specifically include could be done,
+it is currently out of scope due to the anticipated
+frequency of this being a problem.
