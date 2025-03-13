@@ -29,8 +29,9 @@ import { mkdir, rm, writeFile, rename } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { platform } from 'node:os';
-import { spawnSync, SpawnSyncOptions } from 'node:child_process';
+import { spawnSync } from 'node:child_process';
 import { chdir, cwd } from 'node:process';
+import { run } from './run.js';
 
 const testDir = resolve('.test');
 const srcDir = join(testDir, 'src');
@@ -69,47 +70,6 @@ async function updateTarget(
 	expect(result).to.be.true;
 	expect(errors.length).to.equal(0);
 	expect(warnings.length).to.equal(0);
-}
-
-async function run(cmd: string): Promise<void>;
-async function run(cmd: string, args: string[]): Promise<void>;
-async function run(cmd: string, opts: SpawnSyncOptions): Promise<void>;
-async function run(
-	cmd: string,
-	args: string[],
-	opts: SpawnSyncOptions,
-): Promise<void>;
-async function run(
-	cmd: string,
-	argsOrOpts?: string[] | SpawnSyncOptions,
-	maybeOpts?: SpawnSyncOptions,
-): Promise<void> {
-	let args: string[] | undefined = undefined;
-	let opts: SpawnSyncOptions | undefined = undefined;
-
-	if (Array.isArray(argsOrOpts)) {
-		args = argsOrOpts;
-		opts = maybeOpts;
-	} else {
-		opts = argsOrOpts;
-	}
-
-	const optsToUse: SpawnSyncOptions = { encoding: 'utf8' };
-	if (opts) {
-		Object.assign(optsToUse, opts);
-	}
-
-	const result = spawnSync(cmd, args, optsToUse);
-	if (result.error) {
-		console.error(cmd, args, 'Encountered error:', result.error);
-		throw result.error;
-	}
-
-	if (result.status !== 0) {
-		console.error(cmd, args, 'returned exit code:', result.status);
-		console.log((result.output as string[]).join(''));
-		throw new Error(`${cmd} returned nonzero exit code`);
-	}
 }
 
 describe('Distribution', function () {
