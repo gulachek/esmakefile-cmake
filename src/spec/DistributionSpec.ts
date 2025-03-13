@@ -32,6 +32,8 @@ import { platform } from 'node:os';
 import { spawnSync } from 'node:child_process';
 import { chdir, cwd } from 'node:process';
 import { run } from './run.js';
+import { cmake } from './cmake.js';
+import { installUpstream } from './upstream.js';
 
 const testDir = resolve('.test');
 const srcDir = join(testDir, 'src');
@@ -100,16 +102,16 @@ describe('Distribution', function () {
 		});
 
 		await mkdir(stageDir);
-		await run('cmake', [
-			'-B',
-			stageDir,
-			'-S',
-			join(testDir, `${d.name}-${d.version}`),
-			`-DCMAKE_PREFIX_PATH=${vendorDir}`,
-		]);
+		await cmake.configure({
+			build: stageDir,
+			src: join(testDir, `${d.name}-${d.version}`),
+			prefixPath: [vendorDir],
+		});
+
 		// Specify config b.c. default for MS is Debug for --build and Release for --install
-		await run('cmake', ['--build', stageDir, '--config', 'Release']);
-		await run('cmake', ['--install', stageDir, '--prefix', vendorDir]);
+		await cmake.build(stageDir, { config: 'Release' });
+
+		await cmake.install(stageDir, { prefix: vendorDir });
 		await rm(stageDir, { recursive: true });
 	}
 
@@ -1004,6 +1006,9 @@ describe('Distribution', function () {
 
 			await install(upstreamDist);
 
+			await installUpstream(stageDir, vendorDir);
+			await rm(stageDir, { recursive: true });
+
 			// demonstrate we can decouple pkgconfig/cmake names
 			await rename(
 				'vendor/lib/pkgconfig/one.pc',
@@ -1151,15 +1156,12 @@ describe('Distribution', function () {
 			);
 
 			await rm(buildDir, { recursive: true });
-			debugger;
-			await run('cmake', [
-				'-S',
-				testDir,
-				'-B',
-				buildDir,
-				`-DCMAKE_PREFIX_PATH=${vendorDir}`,
-			]);
-			await run('cmake', ['--build', buildDir]);
+			await cmake.configure({
+				src: testDir,
+				build: buildDir,
+				prefixPath: [vendorDir],
+			});
+			await cmake.build(buildDir);
 			expectOutput(join(buildDir, 'print'), '2+2=4');
 		});
 	});
