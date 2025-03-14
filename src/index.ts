@@ -24,9 +24,10 @@ export {
 	IAddExecutableOpts,
 	IAddTestOpts,
 	IFindPackageOpts,
+	IFindPackageResult,
 	ITest,
 } from './Distribution.js';
 export { Executable } from './Executable.js';
-export { Library, IImportedLibrary } from './Library.js';
+export { Library } from './Library.js';
 export { addCompileCommands } from './CompileCommands.js';
 export { CStandard, CxxStandard } from './Source.js';

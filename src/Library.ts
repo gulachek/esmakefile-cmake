@@ -18,11 +18,6 @@
  */
 import { IBuildPath, Path } from 'esmakefile';
 
-/**
- * Type returned from findPackage. TREAT THIS AS OPAQUE RIGHT
- * NOW. WILL LIKELY CHANGE
- * TODO: only expose name or hash or id and look up private details
- */
 export interface IImportedLibrary {
 	pkgconfig?: string;
 	cmake?: ICMakeImport;
@@ -188,10 +183,4 @@ export function makeLibrary(
 	);
 
 	return out;
-}
-
-export function isImported(
-	lib: IImportedLibrary | Library,
-): lib is IImportedLibrary {
-	return typeof (lib as Library).binary === 'undefined';
 }

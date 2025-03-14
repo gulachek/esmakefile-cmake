@@ -27,9 +27,7 @@ import {
 	Library,
 	ResolvedLibraryType,
 	IImportedLibrary,
-	isImported,
 	ILinkedCompilation,
-	ICMakeImport,
 } from './Library.js';
 import { mkdir, copyFile, writeFile, cp } from 'node:fs/promises';
 import { chdir, cwd } from 'node:process';
@@ -69,7 +67,7 @@ export interface IAddExecutableOpts {
 	includeDirs?: PathLike[];
 
 	/** Libraries to link to */
-	linkTo?: (Library | IImportedLibrary)[];
+	linkTo?: (Library | IFindPackageResult)[];
 }
 
 /**
@@ -122,6 +120,15 @@ export interface IFindPackageOpts {
 	cmake?: string | IFindPackageCMakeOpts;
 }
 
+/** Opaque object that can be given to linkTo */
+export interface IFindPackageResult {
+	/** Unique identifier for distribution's package lookup */
+	id: number;
+
+	/** Unstable, potentially not unique name useful for debugging only */
+	debugName: string;
+}
+
 /**
  * Class that represents a packaged distribution of C/C++
  * libraries and executables
@@ -141,6 +148,7 @@ export class Distribution {
 	private _executables: IExecutable[] = [];
 	private _libraries: ILibrary[] = [];
 	private _installedTargets: string[] = [];
+	private _imports: IImportedLibrary[] = [];
 
 	private _compiler: ICompiler;
 	private _defaultLibraryType: ResolvedLibraryType = ResolvedLibraryType.static;
@@ -209,7 +217,14 @@ export class Distribution {
 		if (opts.linkTo) {
 			for (const l of opts.linkTo) {
 				if (isImported(l)) {
-					pkgs.push(l);
+					const { id } = l;
+					if (typeof id !== 'number' || id < 0 || id >= this._imports.length) {
+						throw new Error(
+							`Invalid option given to findPackage (${JSON.stringify(l)})`,
+						);
+					}
+
+					pkgs.push(this._imports[id]);
 				} else {
 					linkTo.push(l);
 				}
@@ -322,7 +337,7 @@ export class Distribution {
 	 * @param name The name of the pkgconfig and cmake package to link to
 	 * @returns An object that can be given to a linkTo option
 	 */
-	findPackage(name: string): IImportedLibrary;
+	findPackage(name: string): IFindPackageResult;
 	/**
 	 * Find an external package to link to. At development
 	 * time, this will search pkgconfig in vendor/lib/pkgconfig
@@ -332,33 +347,44 @@ export class Distribution {
 	 * @param opts Options to specify which package to link to
 	 * @returns An object that can be given to a linkTo option
 	 */
-	findPackage(opts: IFindPackageOpts): IImportedLibrary;
-	findPackage(nameOrOpts: string | IFindPackageOpts): IImportedLibrary {
+	findPackage(opts: IFindPackageOpts): IFindPackageResult;
+	findPackage(nameOrOpts: string | IFindPackageOpts): IFindPackageResult {
+		const lib: IImportedLibrary = {};
+		let debugName = 'invalid';
+
 		if (typeof nameOrOpts === 'string') {
-			return {
-				pkgconfig: nameOrOpts,
-				cmake: {
-					packageName: nameOrOpts,
-					libraryTargetName: nameOrOpts,
-				},
+			const nm = nameOrOpts;
+			debugName = nm;
+			lib.pkgconfig = nm;
+			lib.cmake = {
+				packageName: nm,
+				libraryTargetName: nm,
 			};
 		} else {
 			const { pkgconfig, cmake } = nameOrOpts;
-			const out: IImportedLibrary = { pkgconfig };
+			if (typeof pkgconfig === 'string') {
+				debugName = pkgconfig;
+				lib.pkgconfig = pkgconfig;
+			}
+
 			if (cmake) {
 				if (typeof cmake === 'string') {
-					out.cmake = {
+					debugName = cmake;
+					lib.cmake = {
 						packageName: cmake,
 						libraryTargetName: cmake,
 					};
 				} else {
 					const { packageName, libraryTargetName } = cmake;
-					out.cmake = { packageName, libraryTargetName };
+					debugName = packageName;
+					lib.cmake = { packageName, libraryTargetName };
 				}
 			}
-
-			return out;
 		}
+
+		const id = this._imports.length;
+		this._imports.push(lib);
+		return { id, debugName };
 	}
 
 	/** clangd compilation databases for all libraries/executables. Use addCompileCommands instead. */
@@ -667,4 +693,10 @@ export class Distribution {
 			}
 		});
 	}
+}
+
+function isImported(
+	lib: IFindPackageResult | Library,
+): lib is IFindPackageResult {
+	return lib && typeof (lib as Library).binary === 'undefined';
 }
