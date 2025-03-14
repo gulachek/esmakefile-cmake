@@ -27,7 +27,7 @@ export interface ICMakeImport {
 	packageName: string;
 	component?: string;
 	version?: string;
-	libraryTargetName: string;
+	libraryTarget: string;
 }
 
 /**

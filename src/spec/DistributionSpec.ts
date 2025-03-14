@@ -666,7 +666,7 @@ describe('Distribution', function () {
 					cmake: {
 						packageName: 'add',
 						version: '2.3.4',
-						libraryTargetName: 'add',
+						libraryTarget: 'add',
 					},
 				});
 
@@ -1090,7 +1090,7 @@ describe('Distribution', function () {
 				cmake: {
 					packageName: 'Two2',
 					version: '2',
-					libraryTargetName: 'two',
+					libraryTarget: 'two',
 				},
 			});
 
@@ -1099,7 +1099,7 @@ describe('Distribution', function () {
 				cmake: {
 					packageName: 'HelloWorld',
 					component: 'hello',
-					libraryTargetName: 'HelloWorld::hello',
+					libraryTarget: 'HelloWorld::hello',
 				},
 			});
 
@@ -1108,7 +1108,7 @@ describe('Distribution', function () {
 				cmake: {
 					packageName: 'HelloWorld',
 					component: 'world',
-					libraryTargetName: 'HelloWorld::world',
+					libraryTarget: 'HelloWorld::world',
 				},
 			});
 

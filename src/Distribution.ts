@@ -113,8 +113,8 @@ export interface IFindPackageCMakeOpts {
 	/** As in find_package(<packageName> <version>) */
 	version?: string;
 
-	/** As in target_link_libraries(... <libraryTargetName>) */
-	libraryTargetName: string;
+	/** As in target_link_libraries(... <libraryTarget>) */
+	libraryTarget: string;
 }
 
 /** Options given to findPackage */
@@ -364,7 +364,7 @@ export class Distribution {
 			lib.pkgconfig = nm;
 			lib.cmake = {
 				packageName: nm,
-				libraryTargetName: nm,
+				libraryTarget: nm,
 			};
 		} else {
 			const { pkgconfig, cmake } = nameOrOpts;
@@ -378,12 +378,12 @@ export class Distribution {
 					debugName = cmake;
 					lib.cmake = {
 						packageName: cmake,
-						libraryTargetName: cmake,
+						libraryTarget: cmake,
 					};
 				} else {
-					const { packageName, component, version, libraryTargetName } = cmake;
-					debugName = libraryTargetName;
-					lib.cmake = { packageName, component, version, libraryTargetName };
+					const { packageName, component, version, libraryTarget } = cmake;
+					debugName = libraryTarget;
+					lib.cmake = { packageName, component, version, libraryTarget };
 				}
 			}
 		}
@@ -565,7 +565,7 @@ export class Distribution {
 
 				for (const p of exe.pkgs) {
 					cmake.push(
-						`target_link_libraries(${exe.name} PRIVATE ${p.cmake.libraryTargetName})`,
+						`target_link_libraries(${exe.name} PRIVATE ${p.cmake.libraryTarget})`,
 					);
 				}
 
@@ -604,7 +604,7 @@ export class Distribution {
 				const pcReqs: string[] = [];
 				for (const p of lib.pkgs) {
 					cmake.push(
-						`target_link_libraries(${lib.name} PRIVATE ${p.cmake.libraryTargetName})`,
+						`target_link_libraries(${lib.name} PRIVATE ${p.cmake.libraryTarget})`,
 					);
 					pcReqs.push(p.pkgconfig);
 				}
