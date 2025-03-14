@@ -574,11 +574,7 @@ describe('Distribution', function () {
 
 				await writePath(
 					'include/mul.h',
-					'#ifdef _WIN32',
-					'#define EXPORT __declspec(dllexport)',
-					'#else',
-					'#define EXPORT',
-					'#endif',
+					...defineExport,
 					'EXPORT int mul(int a, int b);',
 				);
 
@@ -661,11 +657,7 @@ describe('Distribution', function () {
 			beforeEach(async () => {
 				await writePath(
 					'include/image_name.h',
-					'#ifdef _WIN32',
-					'#define EXPORT __declspec(dllexport)',
-					'#else',
-					'#define EXPORT',
-					'#endif',
+					...defineExport,
 					'EXPORT int image_name(char *dst, int sz);',
 				);
 
