@@ -34,3 +34,6 @@ project(TestUpstream)
 
 add_subdirectory(one)
 add_subdirectory(two)
+
+# Tests COMPONENTS in CMake package (for find_package testing)
+add_subdirectory(helloworld)
