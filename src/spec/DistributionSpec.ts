@@ -25,7 +25,7 @@ import {
 	Path,
 	BuildPathLike,
 } from 'esmakefile';
-import { mkdir, rm, writeFile, rename } from 'node:fs/promises';
+import { mkdir, rm, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { platform } from 'node:os';
@@ -1008,7 +1008,10 @@ describe('Distribution', function () {
 
 			const two = d.findPackage({
 				pkgconfig: 'two',
-				cmake: 'two',
+				cmake: {
+					packageName: 'Two2',
+					libraryTargetName: 'two',
+				},
 			});
 
 			const printv = d.addExecutable({

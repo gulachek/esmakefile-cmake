@@ -29,6 +29,7 @@ import {
 	IImportedLibrary,
 	isImported,
 	ILinkedCompilation,
+	ICMakeImport,
 } from './Library.js';
 import { mkdir, copyFile, writeFile, cp } from 'node:fs/promises';
 import { chdir, cwd } from 'node:process';
@@ -104,13 +105,21 @@ export interface IAddLibraryOpts extends IAddExecutableOpts {
 	type?: LibraryType;
 }
 
+export interface IFindPackageCMakeOpts {
+	/** As in find_package(<packageName> ...) */
+	packageName: string;
+
+	/** As in target_link_libraries(... <libraryTargetName>) */
+	libraryTargetName: string;
+}
+
 /** Options given to findPackage */
 export interface IFindPackageOpts {
 	/** The name of the pkgconfig package to link at development time */
 	pkgconfig?: string;
 
 	/** The name of the cmake package to link in the distribution */
-	cmake?: string;
+	cmake?: string | IFindPackageCMakeOpts;
 }
 
 /**
@@ -326,9 +335,29 @@ export class Distribution {
 	findPackage(opts: IFindPackageOpts): IImportedLibrary;
 	findPackage(nameOrOpts: string | IFindPackageOpts): IImportedLibrary {
 		if (typeof nameOrOpts === 'string') {
-			return { pkgconfig: nameOrOpts, cmake: nameOrOpts };
+			return {
+				pkgconfig: nameOrOpts,
+				cmake: {
+					packageName: nameOrOpts,
+					libraryTargetName: nameOrOpts,
+				},
+			};
 		} else {
-			return nameOrOpts;
+			const { pkgconfig, cmake } = nameOrOpts;
+			const out: IImportedLibrary = { pkgconfig };
+			if (cmake) {
+				if (typeof cmake === 'string') {
+					out.cmake = {
+						packageName: cmake,
+						libraryTargetName: cmake,
+					};
+				} else {
+					const { packageName, libraryTargetName } = cmake;
+					out.cmake = { packageName, libraryTargetName };
+				}
+			}
+
+			return out;
 		}
 	}
 
@@ -424,7 +453,7 @@ export class Distribution {
 						return false;
 					}
 
-					pkgNames.add(cmake);
+					pkgNames.add(cmake.packageName);
 				}
 
 				// Copy all includes into dist/include
@@ -470,7 +499,9 @@ export class Distribution {
 				}
 
 				for (const p of exe.pkgs) {
-					cmake.push(`target_link_libraries(${exe.name} PRIVATE ${p.cmake})`);
+					cmake.push(
+						`target_link_libraries(${exe.name} PRIVATE ${p.cmake.libraryTargetName})`,
+					);
 				}
 
 				cmake.push(`install(TARGETS ${exe.name})`);
@@ -507,7 +538,9 @@ export class Distribution {
 
 				const pcReqs: string[] = [];
 				for (const p of lib.pkgs) {
-					cmake.push(`target_link_libraries(${lib.name} PRIVATE ${p.cmake})`);
+					cmake.push(
+						`target_link_libraries(${lib.name} PRIVATE ${p.cmake.libraryTargetName})`,
+					);
 					pcReqs.push(p.pkgconfig);
 				}
 
@@ -584,7 +617,7 @@ export class Distribution {
 				];
 
 				for (const p of lib.pkgs) {
-					configContents.push(`find_dependency(${p.cmake})`);
+					configContents.push(`find_dependency(${p.cmake.packageName})`);
 				}
 
 				configContents.push(`check_required_components(${lib.name})`);
