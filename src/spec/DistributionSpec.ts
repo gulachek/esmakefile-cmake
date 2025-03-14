@@ -544,6 +544,45 @@ describe('Distribution', function () {
 				await expectOutput(test.binary, '2+2=4');
 			});
 
+			it('can specify a pkgconfig version', async () => {
+				const d = new Distribution(make, {
+					name: 'test',
+					version: '1.2.3',
+				});
+
+				const addPkg = d.findPackage({
+					pkgconfig: 'add = 2.3.4',
+				});
+
+				const test = d.addExecutable({
+					name: 'test',
+					src: ['src/test.c'],
+					linkTo: [addPkg],
+				});
+
+				await expectOutput(test.binary, '2+2=4');
+			});
+
+			it('fails if incompatible version specified', async () => {
+				const d = new Distribution(make, {
+					name: 'test',
+					version: '1.2.3',
+				});
+
+				const addPkg = d.findPackage({
+					pkgconfig: 'add < 2.3.4',
+				});
+
+				const test = d.addExecutable({
+					name: 'test',
+					src: ['src/test.c'],
+					linkTo: [addPkg],
+				});
+
+				const { result } = await experimental.updateTarget(make, test.binary);
+				expect(result).to.be.false;
+			});
+
 			it('can specify an external package for linking differently between pkgconfig and cmake', async () => {
 				const d = new Distribution(make, {
 					name: 'test',
