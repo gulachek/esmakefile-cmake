@@ -961,6 +961,18 @@ describe('Distribution', function () {
 				'int add(int a, int b) { return one() * (a + b); }',
 			);
 
+			await writePath(
+				'src/test_upstream.c',
+				'#include <two.h>',
+				'#include <assert.h>',
+				'#include <stdio.h>',
+				'int main() {',
+				' assert(two()+two() == 4);',
+				' printf("success!");',
+				'	return 0;',
+				'}',
+			);
+
 			await writePath('src/unit_test.c', 'int main() { return 0; }');
 
 			const genC = Path.build('gen.c');
@@ -994,6 +1006,11 @@ describe('Distribution', function () {
 				cmake: 'one',
 			});
 
+			const two = d.findPackage({
+				pkgconfig: 'two',
+				cmake: 'two',
+			});
+
 			const printv = d.addExecutable({
 				name: 'printv',
 				src: ['src/printv.c'],
@@ -1008,6 +1025,12 @@ describe('Distribution', function () {
 				name: 'add',
 				src: ['src/add.c'],
 				linkTo: [one],
+			});
+
+			const testUpstream = d.addExecutable({
+				name: 'test_upstream',
+				src: ['src/test_upstream.c'],
+				linkTo: [two],
 			});
 
 			d.addTest({
@@ -1029,6 +1052,7 @@ describe('Distribution', function () {
 			d.install(printvxx);
 			d.install(add);
 			d.install(gen);
+			d.install(testUpstream);
 
 			await install(d);
 		});
@@ -1045,6 +1069,10 @@ describe('Distribution', function () {
 
 		it('can install a target with generated source', async () => {
 			await expectOutput('vendor/bin/gen', 'generated!');
+		});
+
+		it('passes upstream checks', async () => {
+			await expectOutput('vendor/bin/test_upstream', 'success!');
 		});
 
 		it('does not install a test', () => {
