@@ -107,6 +107,9 @@ export interface IFindPackageCMakeOpts {
 	/** As in find_package(<packageName> ...) */
 	packageName: string;
 
+	/** As in find_package(<packageName> COMPONENTS <component>) */
+	component?: string;
+
 	/** As in target_link_libraries(... <libraryTargetName>) */
 	libraryTargetName: string;
 }
@@ -375,9 +378,9 @@ export class Distribution {
 						libraryTargetName: cmake,
 					};
 				} else {
-					const { packageName, libraryTargetName } = cmake;
-					debugName = packageName;
-					lib.cmake = { packageName, libraryTargetName };
+					const { packageName, component, libraryTargetName } = cmake;
+					debugName = libraryTargetName;
+					lib.cmake = { packageName, component, libraryTargetName };
 				}
 			}
 		}
@@ -468,7 +471,9 @@ export class Distribution {
 			const targets: ILinkedCompilation[] = [...distExes, ...distLibs];
 
 			const pkgNames = new Set<string>();
+			const pkgComponents = new Map<string, Set<string>>();
 
+			// Get unique packages that are used by distributed targets
 			for (const c of targets) {
 				for (const p of c.pkgs) {
 					const { cmake, pkgconfig } = p;
@@ -479,7 +484,17 @@ export class Distribution {
 						return false;
 					}
 
-					pkgNames.add(cmake.packageName);
+					const { packageName, component } = cmake;
+					if (component) {
+						let c = pkgComponents.get(packageName);
+						if (!c) {
+							c = new Set<string>();
+							pkgComponents.set(packageName, c);
+						}
+						c.add(component);
+					} else {
+						pkgNames.add(packageName);
+					}
 				}
 
 				// Copy all includes into dist/include
@@ -493,6 +508,11 @@ export class Distribution {
 
 			for (const pkgName of pkgNames) {
 				cmake.push(`find_package(${pkgName} REQUIRED)`);
+			}
+
+			for (const [name, components] of pkgComponents) {
+				const c = Array.from(components).join(' ');
+				cmake.push(`find_package(${name} COMPONENTS ${c} REQUIRED)`);
 			}
 
 			if (this.cStd) {

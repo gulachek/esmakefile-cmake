@@ -7,6 +7,6 @@
 #define HELLO_EXPORT
 #endif
 
-void hello();
+const char *hello();
 
 #endif

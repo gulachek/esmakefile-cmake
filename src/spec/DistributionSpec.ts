@@ -964,10 +964,15 @@ describe('Distribution', function () {
 			await writePath(
 				'src/test_upstream.c',
 				'#include <two.h>',
+				'#include <hello.h>',
+				'#include <world.h>',
 				'#include <assert.h>',
 				'#include <stdio.h>',
+				'#include <string.h>',
 				'int main() {',
 				' assert(two()+two() == 4);',
+				' assert(strcmp(hello(), "hello") == 0);',
+				' assert(strcmp(world(), "world") == 0);',
 				' printf("success!");',
 				'	return 0;',
 				'}',
@@ -1014,6 +1019,24 @@ describe('Distribution', function () {
 				},
 			});
 
+			const hello = d.findPackage({
+				pkgconfig: 'hello',
+				cmake: {
+					packageName: 'HelloWorld',
+					component: 'hello',
+					libraryTargetName: 'HelloWorld::hello',
+				},
+			});
+
+			const world = d.findPackage({
+				pkgconfig: 'world',
+				cmake: {
+					packageName: 'HelloWorld',
+					component: 'world',
+					libraryTargetName: 'HelloWorld::world',
+				},
+			});
+
 			const printv = d.addExecutable({
 				name: 'printv',
 				src: ['src/printv.c'],
@@ -1033,7 +1056,7 @@ describe('Distribution', function () {
 			const testUpstream = d.addExecutable({
 				name: 'test_upstream',
 				src: ['src/test_upstream.c'],
-				linkTo: [two],
+				linkTo: [two, hello, world],
 			});
 
 			d.addTest({

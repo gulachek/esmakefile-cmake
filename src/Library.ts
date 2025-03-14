@@ -25,6 +25,7 @@ export interface IImportedLibrary {
 
 export interface ICMakeImport {
 	packageName: string;
+	component?: string;
 	libraryTargetName: string;
 }
 

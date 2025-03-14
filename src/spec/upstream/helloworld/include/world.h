@@ -7,6 +7,6 @@
 #define WORLD_EXPORT
 #endif
 
-void world();
+const char *world();
 
 #endif
