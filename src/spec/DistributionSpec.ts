@@ -25,7 +25,7 @@ import {
 	Path,
 	BuildPathLike,
 } from 'esmakefile';
-import { mkdir, rm, writeFile } from 'node:fs/promises';
+import { mkdir, rm, writeFile, readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { platform } from 'node:os';
@@ -651,6 +651,41 @@ describe('Distribution', function () {
 				});
 
 				await expectOutput(test.binary, '2*3=6');
+			});
+
+			it('can specify a CMake version', async () => {
+				await writePath('LICENSE.txt', 'Test license');
+
+				const d = new Distribution(make, {
+					name: 'test',
+					version: '1.2.3',
+				});
+
+				const addPkg = d.findPackage({
+					pkgconfig: 'add',
+					cmake: {
+						packageName: 'add',
+						version: '2.3.4',
+						libraryTargetName: 'add',
+					},
+				});
+
+				d.addExecutable({
+					name: 'test',
+					src: ['src/test.c'],
+					linkTo: [addPkg],
+				});
+
+				await updateTarget(make, d.dist);
+
+				const cmake = Path.build('test-1.2.3/CMakeLists.txt');
+				const cmakeContents = await readFile(make.abs(cmake), 'utf8');
+
+				const lines = cmakeContents.split('\n');
+				const re = /^find_package\(add\s+2.3.4\s+REQUIRED\)$/;
+				const l = lines.find((l) => l.match(re));
+
+				expect(l, 'Did not find match').not.to.be.empty;
 			});
 		});
 
