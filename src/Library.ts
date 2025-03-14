@@ -18,13 +18,16 @@
  */
 import { IBuildPath, Path } from 'esmakefile';
 
-/**
- * Type returned from findPackage. TREAT THIS AS OPAQUE RIGHT
- * NOW. WILL LIKELY CHANGE
- */
 export interface IImportedLibrary {
 	pkgconfig?: string;
-	cmake?: string;
+	cmake?: ICMakeImport;
+}
+
+export interface ICMakeImport {
+	packageName: string;
+	component?: string;
+	version?: string;
+	libraryTarget: string;
 }
 
 /**
@@ -182,10 +185,4 @@ export function makeLibrary(
 	);
 
 	return out;
-}
-
-export function isImported(
-	lib: IImportedLibrary | Library,
-): lib is IImportedLibrary {
-	return typeof (lib as Library).binary === 'undefined';
 }

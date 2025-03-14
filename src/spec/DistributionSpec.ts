@@ -25,12 +25,15 @@ import {
 	Path,
 	BuildPathLike,
 } from 'esmakefile';
-import { mkdir, rm, writeFile, rename } from 'node:fs/promises';
+import { mkdir, rm, writeFile, readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { platform } from 'node:os';
-import { spawnSync, SpawnSyncOptions } from 'node:child_process';
+import { spawnSync } from 'node:child_process';
 import { chdir, cwd } from 'node:process';
+import { run } from './run.js';
+import { cmake } from './cmake.js';
+import { installUpstream } from './upstream.js';
 
 const testDir = resolve('.test');
 const srcDir = join(testDir, 'src');
@@ -71,47 +74,6 @@ async function updateTarget(
 	expect(warnings.length).to.equal(0);
 }
 
-async function run(cmd: string): Promise<void>;
-async function run(cmd: string, args: string[]): Promise<void>;
-async function run(cmd: string, opts: SpawnSyncOptions): Promise<void>;
-async function run(
-	cmd: string,
-	args: string[],
-	opts: SpawnSyncOptions,
-): Promise<void>;
-async function run(
-	cmd: string,
-	argsOrOpts?: string[] | SpawnSyncOptions,
-	maybeOpts?: SpawnSyncOptions,
-): Promise<void> {
-	let args: string[] | undefined = undefined;
-	let opts: SpawnSyncOptions | undefined = undefined;
-
-	if (Array.isArray(argsOrOpts)) {
-		args = argsOrOpts;
-		opts = maybeOpts;
-	} else {
-		opts = argsOrOpts;
-	}
-
-	const optsToUse: SpawnSyncOptions = { encoding: 'utf8' };
-	if (opts) {
-		Object.assign(optsToUse, opts);
-	}
-
-	const result = spawnSync(cmd, args, optsToUse);
-	if (result.error) {
-		console.error(cmd, args, 'Encountered error:', result.error);
-		throw result.error;
-	}
-
-	if (result.status !== 0) {
-		console.error(cmd, args, 'returned exit code:', result.status);
-		console.log((result.output as string[]).join(''));
-		throw new Error(`${cmd} returned nonzero exit code`);
-	}
-}
-
 describe('Distribution', function () {
 	this.timeout(60000); // 2 sec too short for these specs. MS cmake config takes ~20s
 	let make: Makefile;
@@ -140,16 +102,16 @@ describe('Distribution', function () {
 		});
 
 		await mkdir(stageDir);
-		await run('cmake', [
-			'-B',
-			stageDir,
-			'-S',
-			join(testDir, `${d.name}-${d.version}`),
-			`-DCMAKE_PREFIX_PATH=${vendorDir}`,
-		]);
+		await cmake.configure({
+			build: stageDir,
+			src: join(testDir, `${d.name}-${d.version}`),
+			prefixPath: [vendorDir],
+		});
+
 		// Specify config b.c. default for MS is Debug for --build and Release for --install
-		await run('cmake', ['--build', stageDir, '--config', 'Release']);
-		await run('cmake', ['--install', stageDir, '--prefix', vendorDir]);
+		await cmake.build(stageDir, { config: 'Release' });
+
+		await cmake.install(stageDir, { prefix: vendorDir });
 		await rm(stageDir, { recursive: true });
 	}
 
@@ -582,6 +544,45 @@ describe('Distribution', function () {
 				await expectOutput(test.binary, '2+2=4');
 			});
 
+			it('can specify a pkgconfig version', async () => {
+				const d = new Distribution(make, {
+					name: 'test',
+					version: '1.2.3',
+				});
+
+				const addPkg = d.findPackage({
+					pkgconfig: 'add = 2.3.4',
+				});
+
+				const test = d.addExecutable({
+					name: 'test',
+					src: ['src/test.c'],
+					linkTo: [addPkg],
+				});
+
+				await expectOutput(test.binary, '2+2=4');
+			});
+
+			it('fails if incompatible version specified', async () => {
+				const d = new Distribution(make, {
+					name: 'test',
+					version: '1.2.3',
+				});
+
+				const addPkg = d.findPackage({
+					pkgconfig: 'add < 2.3.4',
+				});
+
+				const test = d.addExecutable({
+					name: 'test',
+					src: ['src/test.c'],
+					linkTo: [addPkg],
+				});
+
+				const { result } = await experimental.updateTarget(make, test.binary);
+				expect(result).to.be.false;
+			});
+
 			it('can specify an external package for linking differently between pkgconfig and cmake', async () => {
 				const d = new Distribution(make, {
 					name: 'test',
@@ -612,11 +613,7 @@ describe('Distribution', function () {
 
 				await writePath(
 					'include/mul.h',
-					'#ifdef _WIN32',
-					'#define EXPORT __declspec(dllexport)',
-					'#else',
-					'#define EXPORT',
-					'#endif',
+					...defineExport,
 					'EXPORT int mul(int a, int b);',
 				);
 
@@ -654,6 +651,41 @@ describe('Distribution', function () {
 				});
 
 				await expectOutput(test.binary, '2*3=6');
+			});
+
+			it('can specify a CMake version', async () => {
+				await writePath('LICENSE.txt', 'Test license');
+
+				const d = new Distribution(make, {
+					name: 'test',
+					version: '1.2.3',
+				});
+
+				const addPkg = d.findPackage({
+					pkgconfig: 'add',
+					cmake: {
+						packageName: 'add',
+						version: '2.3.4',
+						libraryTarget: 'add',
+					},
+				});
+
+				d.addExecutable({
+					name: 'test',
+					src: ['src/test.c'],
+					linkTo: [addPkg],
+				});
+
+				await updateTarget(make, d.dist);
+
+				const cmake = Path.build('test-1.2.3/CMakeLists.txt');
+				const cmakeContents = await readFile(make.abs(cmake), 'utf8');
+
+				const lines = cmakeContents.split('\n');
+				const re = /^find_package\(add\s+2.3.4\s+REQUIRED\)$/;
+				const l = lines.find((l) => l.match(re));
+
+				expect(l, 'Did not find match').not.to.be.empty;
 			});
 		});
 
@@ -699,11 +731,7 @@ describe('Distribution', function () {
 			beforeEach(async () => {
 				await writePath(
 					'include/image_name.h',
-					'#ifdef _WIN32',
-					'#define EXPORT __declspec(dllexport)',
-					'#else',
-					'#define EXPORT',
-					'#endif',
+					...defineExport,
 					'EXPORT int image_name(char *dst, int sz);',
 				);
 
@@ -986,13 +1014,6 @@ describe('Distribution', function () {
 				'target_compile_definitions(zero INTERFACE ZERO=0)',
 			);
 
-			await writePath('include/one.h', ...defineExport, 'EXPORT int one();');
-			await writePath(
-				'src/one.c',
-				'#include "one.h"',
-				'int one() { return 1; }',
-			);
-
 			await writePath(
 				'src/printv.c',
 				'#include <stdio.h>',
@@ -1014,6 +1035,23 @@ describe('Distribution', function () {
 				'int add(int a, int b) { return one() * (a + b); }',
 			);
 
+			await writePath(
+				'src/test_upstream.c',
+				'#include <two.h>',
+				'#include <hello.h>',
+				'#include <world.h>',
+				'#include <assert.h>',
+				'#include <stdio.h>',
+				'#include <string.h>',
+				'int main() {',
+				' assert(two()+two() == 4);',
+				' assert(strcmp(hello(), "hello") == 0);',
+				' assert(strcmp(world(), "world") == 0);',
+				' printf("success!");',
+				'	return 0;',
+				'}',
+			);
+
 			await writePath('src/unit_test.c', 'int main() { return 0; }');
 
 			const genC = Path.build('gen.c');
@@ -1028,27 +1066,8 @@ describe('Distribution', function () {
 				);
 			});
 
-			const upstreamDist = new Distribution(make, {
-				name: 'upstream',
-				version: '0.1.2',
-				cStd: 11,
-				cxxStd: 20,
-			});
-
-			const oneLib = upstreamDist.addLibrary({
-				name: 'one',
-				src: ['src/one.c'],
-			});
-
-			upstreamDist.install(oneLib);
-
-			await install(upstreamDist);
-
-			// demonstrate we can decouple pkgconfig/cmake names
-			await rename(
-				'vendor/lib/pkgconfig/one.pc',
-				'vendor/lib/pkgconfig/libone.pc',
-			);
+			await installUpstream(stageDir, vendorDir);
+			await rm(stageDir, { recursive: true });
 
 			const d = new Distribution(make, {
 				name: 'test',
@@ -1066,6 +1085,33 @@ describe('Distribution', function () {
 				cmake: 'one',
 			});
 
+			const two = d.findPackage({
+				pkgconfig: 'two',
+				cmake: {
+					packageName: 'Two2',
+					version: '2',
+					libraryTarget: 'two',
+				},
+			});
+
+			const hello = d.findPackage({
+				pkgconfig: 'hello',
+				cmake: {
+					packageName: 'HelloWorld',
+					component: 'hello',
+					libraryTarget: 'HelloWorld::hello',
+				},
+			});
+
+			const world = d.findPackage({
+				pkgconfig: 'world',
+				cmake: {
+					packageName: 'HelloWorld',
+					component: 'world',
+					libraryTarget: 'HelloWorld::world',
+				},
+			});
+
 			const printv = d.addExecutable({
 				name: 'printv',
 				src: ['src/printv.c'],
@@ -1080,6 +1126,12 @@ describe('Distribution', function () {
 				name: 'add',
 				src: ['src/add.c'],
 				linkTo: [one],
+			});
+
+			const testUpstream = d.addExecutable({
+				name: 'test_upstream',
+				src: ['src/test_upstream.c'],
+				linkTo: [two, hello, world],
 			});
 
 			d.addTest({
@@ -1101,6 +1153,7 @@ describe('Distribution', function () {
 			d.install(printvxx);
 			d.install(add);
 			d.install(gen);
+			d.install(testUpstream);
 
 			await install(d);
 		});
@@ -1117,6 +1170,10 @@ describe('Distribution', function () {
 
 		it('can install a target with generated source', async () => {
 			await expectOutput('vendor/bin/gen', 'generated!');
+		});
+
+		it('passes upstream checks', async () => {
+			await expectOutput('vendor/bin/test_upstream', 'success!');
 		});
 
 		it('does not install a test', () => {
@@ -1191,15 +1248,12 @@ describe('Distribution', function () {
 			);
 
 			await rm(buildDir, { recursive: true });
-			debugger;
-			await run('cmake', [
-				'-S',
-				testDir,
-				'-B',
-				buildDir,
-				`-DCMAKE_PREFIX_PATH=${vendorDir}`,
-			]);
-			await run('cmake', ['--build', buildDir]);
+			await cmake.configure({
+				src: testDir,
+				build: buildDir,
+				prefixPath: [vendorDir],
+			});
+			await cmake.build(buildDir);
 			expectOutput(join(buildDir, 'print'), '2+2=4');
 		});
 	});

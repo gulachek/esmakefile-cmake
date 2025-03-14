@@ -1,0 +1,16 @@
+@PACKAGE_INIT@
+
+if (NOT DEFINED HelloWorld_FIND_COMPONENTS)
+	set(HelloWorld_FOUND FALSE)
+	message(FATAL_ERROR "COMPONENTS must be defined for find_package(HelloWorld ...)")
+endif()
+
+if ("hello" IN_LIST HelloWorld_FIND_COMPONENTS)
+	include("@PACKAGE_HELLOWORLD_CONFIG_INSTALL_DIR@/hello-targets.cmake")
+endif()
+
+if ("world" IN_LIST HelloWorld_FIND_COMPONENTS)
+	include("@PACKAGE_HELLOWORLD_CONFIG_INSTALL_DIR@/world-targets.cmake")
+endif()
+
+set(HelloWWorld_FOUND TRUE)

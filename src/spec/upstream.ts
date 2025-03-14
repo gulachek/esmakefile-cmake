@@ -16,18 +16,20 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
  * 02111-1307, USA.
  */
-export {
-	Distribution,
-	LibraryType,
-	IDistributionOpts,
-	IAddLibraryOpts,
-	IAddExecutableOpts,
-	IAddTestOpts,
-	IFindPackageOpts,
-	IFindPackageResult,
-	ITest,
-} from './Distribution.js';
-export { Executable } from './Executable.js';
-export { Library } from './Library.js';
-export { addCompileCommands } from './CompileCommands.js';
-export { CStandard, CxxStandard } from './Source.js';
+
+import { cmake } from './cmake.js';
+import { join, dirname } from 'node:path';
+
+export async function installUpstream(
+	buildDir: string,
+	vendorDir: string,
+): Promise<void> {
+	// start off in esmakefile-cmake/dist/spec/
+	const prjRoot = dirname(dirname(import.meta.dirname));
+	const src = join(prjRoot, 'src', 'spec', 'upstream');
+
+	await cmake.configure({ src, build: buildDir, prefixPath: [vendorDir] });
+
+	await cmake.build(buildDir, { config: 'Release' });
+	await cmake.install(buildDir, { prefix: vendorDir });
+}

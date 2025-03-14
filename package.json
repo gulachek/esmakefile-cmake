@@ -1,6 +1,6 @@
 {
 	"name": "esmakefile-cmake",
-	"version": "0.1.4",
+	"version": "0.1.5",
 	"description": "Integrate esmakefile with CMake",
 	"type": "module",
 	"exports": "./dist/index.js",

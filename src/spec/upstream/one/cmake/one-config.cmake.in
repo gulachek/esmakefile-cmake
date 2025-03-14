@@ -1,0 +1,3 @@
+@PACKAGE_INIT@
+include("@PACKAGE_ONE_CONFIG_INSTALL_DIR@/one-targets.cmake")
+check_required_components(one)

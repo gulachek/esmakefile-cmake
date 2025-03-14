@@ -27,7 +27,6 @@ import {
 	Library,
 	ResolvedLibraryType,
 	IImportedLibrary,
-	isImported,
 	ILinkedCompilation,
 } from './Library.js';
 import { mkdir, copyFile, writeFile, cp } from 'node:fs/promises';
@@ -68,7 +67,7 @@ export interface IAddExecutableOpts {
 	includeDirs?: PathLike[];
 
 	/** Libraries to link to */
-	linkTo?: (Library | IImportedLibrary)[];
+	linkTo?: (Library | IFindPackageResult)[];
 }
 
 /**
@@ -104,13 +103,36 @@ export interface IAddLibraryOpts extends IAddExecutableOpts {
 	type?: LibraryType;
 }
 
+export interface IFindPackageCMakeOpts {
+	/** As in find_package(<packageName> ...) */
+	packageName: string;
+
+	/** As in find_package(<packageName> COMPONENTS <component>) */
+	component?: string;
+
+	/** As in find_package(<packageName> <version>) */
+	version?: string;
+
+	/** As in target_link_libraries(... <libraryTarget>) */
+	libraryTarget: string;
+}
+
 /** Options given to findPackage */
 export interface IFindPackageOpts {
 	/** The name of the pkgconfig package to link at development time */
 	pkgconfig?: string;
 
 	/** The name of the cmake package to link in the distribution */
-	cmake?: string;
+	cmake?: string | IFindPackageCMakeOpts;
+}
+
+/** Opaque object that can be given to linkTo */
+export interface IFindPackageResult {
+	/** Unique identifier for distribution's package lookup */
+	id: number;
+
+	/** Unstable, potentially not unique name useful for debugging only */
+	debugName: string;
 }
 
 /**
@@ -132,6 +154,7 @@ export class Distribution {
 	private _executables: IExecutable[] = [];
 	private _libraries: ILibrary[] = [];
 	private _installedTargets: string[] = [];
+	private _imports: IImportedLibrary[] = [];
 
 	private _compiler: ICompiler;
 	private _defaultLibraryType: ResolvedLibraryType = ResolvedLibraryType.static;
@@ -200,7 +223,14 @@ export class Distribution {
 		if (opts.linkTo) {
 			for (const l of opts.linkTo) {
 				if (isImported(l)) {
-					pkgs.push(l);
+					const { id } = l;
+					if (typeof id !== 'number' || id < 0 || id >= this._imports.length) {
+						throw new Error(
+							`Invalid option given to findPackage (${JSON.stringify(l)})`,
+						);
+					}
+
+					pkgs.push(this._imports[id]);
 				} else {
 					linkTo.push(l);
 				}
@@ -313,7 +343,7 @@ export class Distribution {
 	 * @param name The name of the pkgconfig and cmake package to link to
 	 * @returns An object that can be given to a linkTo option
 	 */
-	findPackage(name: string): IImportedLibrary;
+	findPackage(name: string): IFindPackageResult;
 	/**
 	 * Find an external package to link to. At development
 	 * time, this will search pkgconfig in vendor/lib/pkgconfig
@@ -323,13 +353,44 @@ export class Distribution {
 	 * @param opts Options to specify which package to link to
 	 * @returns An object that can be given to a linkTo option
 	 */
-	findPackage(opts: IFindPackageOpts): IImportedLibrary;
-	findPackage(nameOrOpts: string | IFindPackageOpts): IImportedLibrary {
+	findPackage(opts: IFindPackageOpts): IFindPackageResult;
+	findPackage(nameOrOpts: string | IFindPackageOpts): IFindPackageResult {
+		const lib: IImportedLibrary = {};
+		let debugName = 'invalid';
+
 		if (typeof nameOrOpts === 'string') {
-			return { pkgconfig: nameOrOpts, cmake: nameOrOpts };
+			const nm = nameOrOpts;
+			debugName = nm;
+			lib.pkgconfig = nm;
+			lib.cmake = {
+				packageName: nm,
+				libraryTarget: nm,
+			};
 		} else {
-			return nameOrOpts;
+			const { pkgconfig, cmake } = nameOrOpts;
+			if (typeof pkgconfig === 'string') {
+				debugName = pkgconfig;
+				lib.pkgconfig = pkgconfig;
+			}
+
+			if (cmake) {
+				if (typeof cmake === 'string') {
+					debugName = cmake;
+					lib.cmake = {
+						packageName: cmake,
+						libraryTarget: cmake,
+					};
+				} else {
+					const { packageName, component, version, libraryTarget } = cmake;
+					debugName = libraryTarget;
+					lib.cmake = { packageName, component, version, libraryTarget };
+				}
+			}
 		}
+
+		const id = this._imports.length;
+		this._imports.push(lib);
+		return { id, debugName };
 	}
 
 	/** clangd compilation databases for all libraries/executables. Use addCompileCommands instead. */
@@ -412,8 +473,10 @@ export class Distribution {
 
 			const targets: ILinkedCompilation[] = [...distExes, ...distLibs];
 
-			const pkgNames = new Set<string>();
+			type Pkg = { version?: string; components?: Set<string> };
+			const pkgs = new Map<string, Pkg>();
 
+			// Get unique packages that are used by distributed targets
 			for (const c of targets) {
 				for (const p of c.pkgs) {
 					const { cmake, pkgconfig } = p;
@@ -424,7 +487,27 @@ export class Distribution {
 						return false;
 					}
 
-					pkgNames.add(cmake);
+					const { packageName, version, component } = cmake;
+					let pkg = pkgs.get(packageName);
+					if (!pkg) {
+						pkg = { version };
+						pkgs.set(packageName, pkg);
+					}
+
+					if (version && pkg.version && version !== pkg.version) {
+						args.logStream.write(
+							`Warning: CMake package '${packageName}' was given conflicting versions in findPackage(). '${version}' vs '${pkg.version}'. Using '${pkg.version}'\n`,
+						);
+					}
+
+					if (component) {
+						let c = pkg.components;
+						if (!c) {
+							c = new Set<string>();
+							pkg.components = c;
+						}
+						c.add(component);
+					}
 				}
 
 				// Copy all includes into dist/include
@@ -436,8 +519,19 @@ export class Distribution {
 				}
 			}
 
-			for (const pkgName of pkgNames) {
-				cmake.push(`find_package(${pkgName} REQUIRED)`);
+			for (const [name, deets] of pkgs) {
+				const { version, components } = deets;
+				const line = [`find_package(${name}`];
+				if (version) {
+					line.push(version);
+				}
+
+				if (components) {
+					line.push('COMPONENTS', ...components);
+				}
+
+				line.push('REQUIRED)');
+				cmake.push(line.join(' '));
 			}
 
 			if (this.cStd) {
@@ -470,7 +564,9 @@ export class Distribution {
 				}
 
 				for (const p of exe.pkgs) {
-					cmake.push(`target_link_libraries(${exe.name} PRIVATE ${p.cmake})`);
+					cmake.push(
+						`target_link_libraries(${exe.name} PRIVATE ${p.cmake.libraryTarget})`,
+					);
 				}
 
 				cmake.push(`install(TARGETS ${exe.name})`);
@@ -507,7 +603,9 @@ export class Distribution {
 
 				const pcReqs: string[] = [];
 				for (const p of lib.pkgs) {
-					cmake.push(`target_link_libraries(${lib.name} PRIVATE ${p.cmake})`);
+					cmake.push(
+						`target_link_libraries(${lib.name} PRIVATE ${p.cmake.libraryTarget})`,
+					);
 					pcReqs.push(p.pkgconfig);
 				}
 
@@ -584,7 +682,7 @@ export class Distribution {
 				];
 
 				for (const p of lib.pkgs) {
-					configContents.push(`find_dependency(${p.cmake})`);
+					configContents.push(`find_dependency(${p.cmake.packageName})`);
 				}
 
 				configContents.push(`check_required_components(${lib.name})`);
@@ -634,4 +732,10 @@ export class Distribution {
 			}
 		});
 	}
+}
+
+function isImported(
+	lib: IFindPackageResult | Library,
+): lib is IFindPackageResult {
+	return lib && typeof (lib as Library).binary === 'undefined';
 }
