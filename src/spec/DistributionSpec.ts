@@ -948,13 +948,6 @@ describe('Distribution', function () {
 				'target_compile_definitions(zero INTERFACE ZERO=0)',
 			);
 
-			await writePath('include/one.h', ...defineExport, 'EXPORT int one();');
-			await writePath(
-				'src/one.c',
-				'#include "one.h"',
-				'int one() { return 1; }',
-			);
-
 			await writePath(
 				'src/printv.c',
 				'#include <stdio.h>',
@@ -990,30 +983,8 @@ describe('Distribution', function () {
 				);
 			});
 
-			const upstreamDist = new Distribution(make, {
-				name: 'upstream',
-				version: '0.1.2',
-				cStd: 11,
-				cxxStd: 20,
-			});
-
-			const oneLib = upstreamDist.addLibrary({
-				name: 'one',
-				src: ['src/one.c'],
-			});
-
-			upstreamDist.install(oneLib);
-
-			await install(upstreamDist);
-
 			await installUpstream(stageDir, vendorDir);
 			await rm(stageDir, { recursive: true });
-
-			// demonstrate we can decouple pkgconfig/cmake names
-			await rename(
-				'vendor/lib/pkgconfig/one.pc',
-				'vendor/lib/pkgconfig/libone.pc',
-			);
 
 			const d = new Distribution(make, {
 				name: 'test',

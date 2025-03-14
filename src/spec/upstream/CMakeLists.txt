@@ -32,5 +32,5 @@ project(TestUpstream)
 # same as target_link_libraries argument
 #
 
-
+add_subdirectory(one)
 add_subdirectory(two)
