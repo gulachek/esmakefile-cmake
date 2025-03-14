@@ -1054,6 +1054,7 @@ describe('Distribution', function () {
 				pkgconfig: 'two',
 				cmake: {
 					packageName: 'Two2',
+					version: '2',
 					libraryTargetName: 'two',
 				},
 			});

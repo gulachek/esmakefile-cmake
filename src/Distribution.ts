@@ -110,6 +110,9 @@ export interface IFindPackageCMakeOpts {
 	/** As in find_package(<packageName> COMPONENTS <component>) */
 	component?: string;
 
+	/** As in find_package(<packageName> <version>) */
+	version?: string;
+
 	/** As in target_link_libraries(... <libraryTargetName>) */
 	libraryTargetName: string;
 }
@@ -378,9 +381,9 @@ export class Distribution {
 						libraryTargetName: cmake,
 					};
 				} else {
-					const { packageName, component, libraryTargetName } = cmake;
+					const { packageName, component, version, libraryTargetName } = cmake;
 					debugName = libraryTargetName;
-					lib.cmake = { packageName, component, libraryTargetName };
+					lib.cmake = { packageName, component, version, libraryTargetName };
 				}
 			}
 		}
@@ -470,8 +473,8 @@ export class Distribution {
 
 			const targets: ILinkedCompilation[] = [...distExes, ...distLibs];
 
-			const pkgNames = new Set<string>();
-			const pkgComponents = new Map<string, Set<string>>();
+			type Pkg = { version?: string; components?: Set<string> };
+			const pkgs = new Map<string, Pkg>();
 
 			// Get unique packages that are used by distributed targets
 			for (const c of targets) {
@@ -484,16 +487,26 @@ export class Distribution {
 						return false;
 					}
 
-					const { packageName, component } = cmake;
+					const { packageName, version, component } = cmake;
+					let pkg = pkgs.get(packageName);
+					if (!pkg) {
+						pkg = { version };
+						pkgs.set(packageName, pkg);
+					}
+
+					if (version && pkg.version && version !== pkg.version) {
+						args.logStream.write(
+							`Warning: CMake package '${packageName}' was given conflicting versions in findPackage(). '${version}' vs '${pkg.version}'. Using '${pkg.version}'\n`,
+						);
+					}
+
 					if (component) {
-						let c = pkgComponents.get(packageName);
+						let c = pkg.components;
 						if (!c) {
 							c = new Set<string>();
-							pkgComponents.set(packageName, c);
+							pkg.components = c;
 						}
 						c.add(component);
-					} else {
-						pkgNames.add(packageName);
 					}
 				}
 
@@ -506,13 +519,19 @@ export class Distribution {
 				}
 			}
 
-			for (const pkgName of pkgNames) {
-				cmake.push(`find_package(${pkgName} REQUIRED)`);
-			}
+			for (const [name, deets] of pkgs) {
+				const { version, components } = deets;
+				const line = [`find_package(${name}`];
+				if (version) {
+					line.push(version);
+				}
 
-			for (const [name, components] of pkgComponents) {
-				const c = Array.from(components).join(' ');
-				cmake.push(`find_package(${name} COMPONENTS ${c} REQUIRED)`);
+				if (components) {
+					line.push('COMPONENTS', ...components);
+				}
+
+				line.push('REQUIRED)');
+				cmake.push(line.join(' '));
 			}
 
 			if (this.cStd) {
