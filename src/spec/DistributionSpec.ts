@@ -689,6 +689,66 @@ describe('Distribution', function () {
 			});
 		});
 
+		it('can link between distributions', async () => {
+			await mkdir(join(testDir, 'a', 'include'), { recursive: true });
+			await mkdir(join(testDir, 'b', 'include'), { recursive: true });
+
+			await writePath('a/include/a.h', 'char a();');
+			await writePath('a/a.c', "char a() { return 'a'; }");
+			await writePath('b/include/b.h', 'char b();');
+			await writePath(
+				'b/b.c',
+				'#include <a.h>',
+				"char b() { return 'a' + 1; }",
+			);
+
+			await writePath(
+				'src/main.c',
+				'#include <stdio.h>',
+				'#include <b.h>',
+				'int main() {',
+				' printf("%c", b());',
+				' return 0;',
+				'}',
+			);
+
+			const a = new Distribution(make, {
+				name: 'a',
+				version: '1.2.3',
+			});
+
+			const liba = a.addLibrary({
+				name: 'a',
+				src: ['a/a.c'],
+				includeDirs: ['a/include'],
+			});
+
+			const b = new Distribution(make, {
+				name: 'b',
+				version: '2.3.4',
+			});
+
+			const libb = b.addLibrary({
+				name: 'b',
+				src: ['b/b.c'],
+				includeDirs: ['b/include'],
+				linkTo: [liba],
+			});
+
+			const d = new Distribution(make, {
+				name: 'test',
+				version: '3.4.5',
+			});
+
+			const main = d.addExecutable({
+				name: 'main',
+				src: ['src/main.c'],
+				linkTo: [libb],
+			});
+
+			await expectOutput(main.binary, 'b');
+		});
+
 		it('can add a unit test executable', async () => {
 			await mkdir(join(testDir, 'test'));
 			await writePath('include/add.h', 'int add(int a, int b);');
