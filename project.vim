@@ -14,3 +14,26 @@ augroup esmakefilecmake
 	autocmd!
 	autocmd BufNewFile *.ts :0r <sfile>:h/vim/templates/skeleton.ts
 augroup END
+
+" Automatically attempt to set CLANG_CHECK
+if empty($CLANG_CHECK)
+if has('win32')
+	" Windows
+	echo "WARNING! Update project.vim to set CLANG_CHECK=%ProgramFiles%\\LLVM\\bin\\clang-check.exe for Windows"
+else
+	let uname = trim(system('uname'))
+	if uname == 'Darwin'
+		" macOS
+		let llvm = trim(system('brew --prefix llvm'))
+		let clangCheck = llvm . '/bin/clang-check'
+		if executable(clangCheck)
+			let $CLANG_CHECK = clangCheck
+		else
+			echo "WARNING! Make sure clang-check is installed and set the CLANG_CHECK environment variable"
+		endif
+	else
+		" Linux
+		echo "WARNING! Update project.vim to set CLANG_CHECK=/usr/bin/clang-check-18 for Linux"
+	endif
+endif
+endif
