@@ -727,6 +727,38 @@ describe('Distribution', function () {
 			await updateTarget(make, 'test-add');
 		});
 
+		it('has access to unit test executable via binary', async () => {
+			await mkdir(join(testDir, 'test'));
+			await writePath('include/add.h', 'int add(int a, int b);');
+			await writePath('src/add.c', 'int add(int a, int b) { return a + b; }');
+
+			await writePath(
+				'test/add_test.c',
+				'#include "add.h"',
+				'int main() {',
+				'return add(2,2) != 4;',
+				'}',
+			);
+
+			const d = new Distribution(make, {
+				name: 'add',
+				version: '1.2.3',
+			});
+
+			const add = d.addLibrary({
+				name: 'add',
+				src: ['src/add.c'],
+			});
+
+			const { binary } = d.addTest({
+				name: 'add_test',
+				src: ['test/add_test.c'],
+				linkTo: [add],
+			});
+
+			await expectOutput(binary, '');
+		});
+
 		describe('static vs dynamic', () => {
 			beforeEach(async () => {
 				await writePath(

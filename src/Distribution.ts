@@ -81,6 +81,9 @@ export interface IAddTestOpts extends IAddExecutableOpts {}
 export interface ITest {
 	/** Target that, when updated, runs the test executable */
 	run: IBuildPath;
+
+	/** Path to the built binary of the test executable */
+	binary: IBuildPath;
 }
 
 /**
@@ -299,7 +302,7 @@ export class Distribution {
 
 		this.make.add(this.test, [run]);
 
-		return { run };
+		return { run, binary: exe.binary };
 	}
 
 	/**
