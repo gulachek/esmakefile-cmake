@@ -999,7 +999,10 @@ describe('Distribution', function () {
 			await updateTarget(make, commands);
 
 			const clangCheck = process.env['CLANG_CHECK'];
-			expect(clangCheck).not.to.be.empty;
+			expect(
+				clangCheck,
+				'the CLANG_CHECK environment variable should be specified, but is not',
+			).not.to.be.empty;
 			await run(clangCheck, [
 				'-p',
 				make.buildRoot,
