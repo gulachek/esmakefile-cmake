@@ -1251,6 +1251,27 @@ describe('Distribution', function () {
 			d.install(testUpstream);
 
 			await install(d);
+
+			const d2 = new Distribution(make, {
+				name: 'test2',
+				version: '2.3.4',
+			});
+
+			await writePath('include/times2.h', 'int times2(int n);');
+			await writePath(
+				'src/times2.c',
+				'#include <add.h>',
+				'int times2(int n){ return add(n, n); }',
+			);
+
+			const times2 = d2.addLibrary({
+				name: 'times2',
+				src: ['src/times2.c'],
+				linkTo: [add], // from different distribution!
+			});
+
+			d2.install(times2);
+			await install(d2);
 		});
 
 		after(async () => {
@@ -1326,9 +1347,9 @@ describe('Distribution', function () {
 			await writePath(
 				'src/print.c',
 				'#include <stdio.h>',
-				'#include <add.h>',
+				'#include <times2.h>',
 				'int main() {',
-				'printf("2+2=%d", add(2,2));',
+				'printf("2*3=%d", times2(3));',
 				'return 0;',
 				'}',
 			);
@@ -1337,9 +1358,9 @@ describe('Distribution', function () {
 				'CMakeLists.txt',
 				'cmake_minimum_required(VERSION 3.10)',
 				'project(Test)',
-				'find_package(add REQUIRED)',
+				'find_package(times2 REQUIRED)',
 				'add_executable(print src/print.c)',
-				'target_link_libraries(print PRIVATE add)',
+				'target_link_libraries(print PRIVATE times2)',
 			);
 
 			await rm(buildDir, { recursive: true });
@@ -1349,7 +1370,7 @@ describe('Distribution', function () {
 				prefixPath: [vendorDir],
 			});
 			await cmake.build(buildDir);
-			expectOutput(join(buildDir, 'print'), '2+2=4');
+			expectOutput(join(buildDir, 'print'), '2*3=6');
 		});
 	});
 });
