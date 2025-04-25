@@ -21,6 +21,7 @@ import { IBuildPath, Path } from 'esmakefile';
 export interface IImportedLibrary {
 	pkgconfig?: string;
 	cmake?: ICMakeImport;
+	crossDistro?: boolean;
 }
 
 export interface ICMakeImport {
@@ -47,12 +48,20 @@ export class Library {
 	/** The type of the library */
 	readonly type: ResolvedLibraryType;
 
+	/** The name of the Distribution this Library belongs to */
+	readonly distName: string;
+
+	/** The version of the Distribution this Library belongs to */
+	readonly distVersion: string;
+
 	private _includes: Path[] = [];
 	private _libs: Library[] = [];
 
 	constructor(
 		name: string,
 		type: ResolvedLibraryType,
+		distName: string,
+		distVersion: string,
 		includes: Path[],
 		libs: Library[],
 		binary: IBuildPath,
@@ -60,6 +69,8 @@ export class Library {
 	) {
 		this.name = name;
 		this.type = type;
+		this.distName = distName;
+		this.distVersion = distVersion;
 		this._includes = includes;
 		this._libs = libs;
 		this.binary = binary;
@@ -90,6 +101,8 @@ export interface ILinkedCompilation {
 	compileCommands: IBuildPath;
 	// not included in actual distribution
 	devOnly: boolean;
+	distName: string;
+	distVersion: string;
 }
 
 function transitiveLibs(c: ILinkedCompilation): Library[] {
@@ -139,8 +152,10 @@ export function allPkgDeps(c: ILinkedCompilation): IPkgDeps {
 	}
 
 	for (const p of c.pkgs) {
-		const { pkgconfig, cmake } = p;
+		const { pkgconfig, cmake, crossDistro } = p;
 		if (!pkgconfig) {
+			if (crossDistro) continue;
+
 			throw new Error(
 				`'${c.name}' is linked to a findPackage that has no pkgconfig name specified (cmake: '${cmake}')`,
 			);
@@ -178,6 +193,8 @@ export function makeLibrary(
 	const out = new Library(
 		lib.name,
 		lib.type,
+		lib.distName,
+		lib.distVersion,
 		lib.includeDirs,
 		lib.linkTo,
 		binary,
