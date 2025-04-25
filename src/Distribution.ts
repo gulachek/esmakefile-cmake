@@ -235,6 +235,18 @@ export class Distribution {
 
 					pkgs.push(this._imports[id]);
 				} else {
+					if (l.distName !== this.name) {
+						// from another Distribution!
+						pkgs.push({
+							cmake: {
+								packageName: l.name,
+								libraryTarget: l.name,
+								version: l.distVersion,
+							},
+							crossDistro: true,
+						});
+					}
+
 					linkTo.push(l);
 				}
 			}
@@ -249,6 +261,8 @@ export class Distribution {
 			pkgs,
 			compileCommands: this.outDir.join(`.${opts.name}-compile_commands.json`),
 			devOnly: false,
+			distName: this.name,
+			distVersion: this.version,
 		};
 	}
 

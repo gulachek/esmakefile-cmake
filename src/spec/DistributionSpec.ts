@@ -689,6 +689,66 @@ describe('Distribution', function () {
 			});
 		});
 
+		it('can link between distributions', async () => {
+			await mkdir(join(testDir, 'a', 'include'), { recursive: true });
+			await mkdir(join(testDir, 'b', 'include'), { recursive: true });
+
+			await writePath('a/include/a.h', 'char a();');
+			await writePath('a/a.c', "char a() { return 'a'; }");
+			await writePath('b/include/b.h', 'char b();');
+			await writePath(
+				'b/b.c',
+				'#include <a.h>',
+				"char b() { return 'a' + 1; }",
+			);
+
+			await writePath(
+				'src/main.c',
+				'#include <stdio.h>',
+				'#include <b.h>',
+				'int main() {',
+				' printf("%c", b());',
+				' return 0;',
+				'}',
+			);
+
+			const a = new Distribution(make, {
+				name: 'a',
+				version: '1.2.3',
+			});
+
+			const liba = a.addLibrary({
+				name: 'a',
+				src: ['a/a.c'],
+				includeDirs: ['a/include'],
+			});
+
+			const b = new Distribution(make, {
+				name: 'b',
+				version: '2.3.4',
+			});
+
+			const libb = b.addLibrary({
+				name: 'b',
+				src: ['b/b.c'],
+				includeDirs: ['b/include'],
+				linkTo: [liba],
+			});
+
+			const d = new Distribution(make, {
+				name: 'test',
+				version: '3.4.5',
+			});
+
+			const main = d.addExecutable({
+				name: 'main',
+				src: ['src/main.c'],
+				linkTo: [libb],
+			});
+
+			await expectOutput(main.binary, 'b');
+		});
+
 		it('can add a unit test executable', async () => {
 			await mkdir(join(testDir, 'test'));
 			await writePath('include/add.h', 'int add(int a, int b);');
@@ -1191,6 +1251,27 @@ describe('Distribution', function () {
 			d.install(testUpstream);
 
 			await install(d);
+
+			const d2 = new Distribution(make, {
+				name: 'test2',
+				version: '2.3.4',
+			});
+
+			await writePath('include/times2.h', 'int times2(int n);');
+			await writePath(
+				'src/times2.c',
+				'#include <add.h>',
+				'int times2(int n){ return add(n, n); }',
+			);
+
+			const times2 = d2.addLibrary({
+				name: 'times2',
+				src: ['src/times2.c'],
+				linkTo: [add], // from different distribution!
+			});
+
+			d2.install(times2);
+			await install(d2);
 		});
 
 		after(async () => {
@@ -1266,9 +1347,9 @@ describe('Distribution', function () {
 			await writePath(
 				'src/print.c',
 				'#include <stdio.h>',
-				'#include <add.h>',
+				'#include <times2.h>',
 				'int main() {',
-				'printf("2+2=%d", add(2,2));',
+				'printf("2*3=%d", times2(3));',
 				'return 0;',
 				'}',
 			);
@@ -1277,9 +1358,9 @@ describe('Distribution', function () {
 				'CMakeLists.txt',
 				'cmake_minimum_required(VERSION 3.10)',
 				'project(Test)',
-				'find_package(add REQUIRED)',
+				'find_package(times2 REQUIRED)',
 				'add_executable(print src/print.c)',
-				'target_link_libraries(print PRIVATE add)',
+				'target_link_libraries(print PRIVATE times2)',
 			);
 
 			await rm(buildDir, { recursive: true });
@@ -1289,7 +1370,7 @@ describe('Distribution', function () {
 				prefixPath: [vendorDir],
 			});
 			await cmake.build(buildDir);
-			expectOutput(join(buildDir, 'print'), '2+2=4');
+			expectOutput(join(buildDir, 'print'), '2*3=6');
 		});
 	});
 });
