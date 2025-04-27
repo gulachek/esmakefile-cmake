@@ -213,8 +213,8 @@ describe('Distribution', function () {
 		it('links mixed c/c++ as a c++ executable', async () => {
 			await writePath(
 				'src/hello.cpp',
-				'#include <cstdio>',
-				'extern "C" void hello(){ std::printf("hello!"); }',
+				'#include <iostream>',
+				'extern "C" void hello(){ std::cout << "hello!"; }',
 			);
 
 			await writePath(
