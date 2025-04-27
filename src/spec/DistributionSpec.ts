@@ -209,7 +209,6 @@ describe('Distribution', function () {
 			await expectOutput(hello.binary, 'hello!');
 		});
 
-		// TODO for library too
 		it('links mixed c/c++ as a c++ executable', async () => {
 			await writePath(
 				'src/hello.cpp',
@@ -234,6 +233,47 @@ describe('Distribution', function () {
 			});
 
 			await expectOutput(hello.binary, 'hello!');
+		});
+
+		it('links mixed c/c++ as a c++ library', async () => {
+			await writePath(
+				'src/one.cpp',
+				'#include <string>',
+				'extern "C" int one(){ return std::stoi("1"); }',
+			);
+
+			await writePath(
+				'src/two.c',
+				'extern int one();',
+				...defineExport,
+				'EXPORT int two(){ return one()+one(); }',
+			);
+
+			await writePath(
+				'src/main.c',
+				'#include <stdio.h>',
+				'extern int two();',
+				'int main(){ printf("%d", two()); return 0; }',
+			);
+
+			const d = new Distribution(make, {
+				name: 'test',
+				version: '1.2.3',
+			});
+
+			const nums = d.addLibrary({
+				name: 'nums',
+				src: ['src/two.c', 'src/one.cpp'],
+				type: LibraryType.dynamic, // make sure fully linked
+			});
+
+			const main = d.addExecutable({
+				name: 'main',
+				src: ['src/main.c'],
+				linkTo: [nums],
+			});
+
+			await expectOutput(main.binary, '2');
 		});
 
 		it('can specify c11', async () => {
