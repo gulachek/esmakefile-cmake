@@ -1340,7 +1340,7 @@ describe('Distribution', function () {
 				linkTo: [add],
 			});
 
-			await expectOutput(print.binary, '2+3=6');
+			await expectOutput(print.binary, '2*3=6');
 		});
 
 		it('installs a CMake package for library', async () => {

@@ -626,6 +626,12 @@ export class Distribution {
 					pcReqs.push(p.pkgconfig);
 				}
 
+				for (const l of lib.linkTo) {
+					if (l.distName !== this.name) {
+						pcReqs.push(l.name);
+					}
+				}
+
 				// Install .pc file
 				// TODO Libs.private: -lc++ for c++ library?
 				const pc: string[] = [
