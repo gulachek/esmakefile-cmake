@@ -209,12 +209,11 @@ describe('Distribution', function () {
 			await expectOutput(hello.binary, 'hello!');
 		});
 
-		// TODO for library too
 		it('links mixed c/c++ as a c++ executable', async () => {
 			await writePath(
 				'src/hello.cpp',
-				'#include <cstdio>',
-				'extern "C" void hello(){ std::printf("hello!"); }',
+				'#include <iostream>',
+				'extern "C" void hello(){ std::cout << "hello!"; }',
 			);
 
 			await writePath(
@@ -234,6 +233,47 @@ describe('Distribution', function () {
 			});
 
 			await expectOutput(hello.binary, 'hello!');
+		});
+
+		it('links mixed c/c++ as a c++ library', async () => {
+			await writePath(
+				'src/one.cpp',
+				'#include <string>',
+				'extern "C" int one(){ return std::stoi("1"); }',
+			);
+
+			await writePath(
+				'src/two.c',
+				'extern int one();',
+				...defineExport,
+				'EXPORT int two(){ return one()+one(); }',
+			);
+
+			await writePath(
+				'src/main.c',
+				'#include <stdio.h>',
+				'extern int two();',
+				'int main(){ printf("%d", two()); return 0; }',
+			);
+
+			const d = new Distribution(make, {
+				name: 'test',
+				version: '1.2.3',
+			});
+
+			const nums = d.addLibrary({
+				name: 'nums',
+				src: ['src/two.c', 'src/one.cpp'],
+				type: LibraryType.dynamic, // make sure fully linked
+			});
+
+			const main = d.addExecutable({
+				name: 'main',
+				src: ['src/main.c'],
+				linkTo: [nums],
+			});
+
+			await expectOutput(main.binary, '2');
 		});
 
 		it('can specify c11', async () => {
@@ -1320,9 +1360,9 @@ describe('Distribution', function () {
 			await writePath(
 				'src/print.c',
 				'#include <stdio.h>',
-				'#include <add.h>',
+				'#include <times2.h>',
 				'int main() {',
-				'printf("2+2=%d", add(2,2));',
+				'printf("2*3=%d", times2(3));',
 				'return 0;',
 				'}',
 			);
@@ -1332,7 +1372,7 @@ describe('Distribution', function () {
 				version: '1.1.1',
 			});
 
-			const add = d.findPackage('add');
+			const add = d.findPackage('times2');
 
 			const print = d.addExecutable({
 				name: 'print',
@@ -1340,7 +1380,7 @@ describe('Distribution', function () {
 				linkTo: [add],
 			});
 
-			await expectOutput(print.binary, '2+2=4');
+			await expectOutput(print.binary, '2*3=6');
 		});
 
 		it('installs a CMake package for library', async () => {
