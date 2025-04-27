@@ -1320,9 +1320,9 @@ describe('Distribution', function () {
 			await writePath(
 				'src/print.c',
 				'#include <stdio.h>',
-				'#include <add.h>',
+				'#include <times2.h>',
 				'int main() {',
-				'printf("2+2=%d", add(2,2));',
+				'printf("2*3=%d", times2(3));',
 				'return 0;',
 				'}',
 			);
@@ -1332,7 +1332,7 @@ describe('Distribution', function () {
 				version: '1.1.1',
 			});
 
-			const add = d.findPackage('add');
+			const add = d.findPackage('times2');
 
 			const print = d.addExecutable({
 				name: 'print',
@@ -1340,7 +1340,7 @@ describe('Distribution', function () {
 				linkTo: [add],
 			});
 
-			await expectOutput(print.binary, '2+2=4');
+			await expectOutput(print.binary, '2+3=6');
 		});
 
 		it('installs a CMake package for library', async () => {
