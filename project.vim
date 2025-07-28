@@ -19,7 +19,12 @@ augroup END
 if empty($CLANG_CHECK)
 if has('win32')
 	" Windows
-	echo "WARNING! Update project.vim to set CLANG_CHECK=%ProgramFiles%\\LLVM\\bin\\clang-check.exe for Windows"
+	let clangCheck = $ProgramFiles . '\LLVM\bin\clang-check.exe'
+		if executable(clangCheck)
+			let $CLANG_CHECK = clangCheck
+		else
+			echo "WARNING! Make sure clang-check is installed and set the CLANG_CHECK environment variable"
+		endif
 else
 	let uname = trim(system('uname'))
 	if uname == 'Darwin'
