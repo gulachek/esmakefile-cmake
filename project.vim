@@ -1,7 +1,7 @@
-set path=.
-set path+=src
-set path+=src/spec
-set path+=.github/workflows
+set path=., " current file's directory and current directory
+set path+=src/**
+set path+=.github/**
+set path+=vim/**
 
 nnoremap <Leader>b :!npm run build<CR>
 nnoremap <Leader>d :!npx mocha --inspect-brk -- dist/spec<CR>
@@ -17,23 +17,24 @@ augroup END
 
 " Automatically attempt to set CLANG_CHECK
 if empty($CLANG_CHECK)
-if has('win32')
-	" Windows
-	echo "WARNING! Update project.vim to set CLANG_CHECK=%ProgramFiles%\\LLVM\\bin\\clang-check.exe for Windows"
-else
-	let uname = trim(system('uname'))
-	if uname == 'Darwin'
-		" macOS
-		let llvm = trim(system('brew --prefix llvm'))
-		let clangCheck = llvm . '/bin/clang-check'
-		if executable(clangCheck)
-			let $CLANG_CHECK = clangCheck
-		else
-			echo "WARNING! Make sure clang-check is installed and set the CLANG_CHECK environment variable"
-		endif
+	let clangCheck = ''
+	if has('win32')
+		" Windows
+		let clangCheck = $ProgramFiles . '\LLVM\bin\clang-check.exe'
 	else
-		" Linux
-		echo "WARNING! Update project.vim to set CLANG_CHECK=/usr/bin/clang-check-18 for Linux"
+		let uname = trim(system('uname'))
+		if uname == 'Darwin'
+			" macOS
+			let llvm = trim(system('brew --prefix llvm'))
+			let clangCheck = llvm . '/bin/clang-check'
+		elseif uname == 'Linux'
+			" Linux
+			let clangCheck = trim(system('which clang-check-18'))
+		endif
 	endif
-endif
+	if executable(clangCheck)
+		let $CLANG_CHECK = clangCheck
+	else
+		echo "WARNING! Make sure clang-check is installed and set the CLANG_CHECK environment variable"
+	endif
 endif

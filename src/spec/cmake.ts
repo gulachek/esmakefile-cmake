@@ -18,6 +18,7 @@
  */
 
 import { run } from './run.js';
+import { platform } from 'node:os';
 
 interface ICMakeConfigureOpts {
 	src: string;
@@ -47,7 +48,14 @@ interface ICMakeInstallOpts {
 	 */
 class CMake {
 	public configure(opts: ICMakeConfigureOpts): Promise<void> {
+		const generator = [];
+		if (platform() === 'win32') {
+			// so much faster than msbuild. Ideally would test msbuild, but not fast enough for quick testing
+			generator.push('-G', 'Ninja');
+		}
+
 		return run('cmake', [
+			...generator,
 			'-B',
 			opts.build,
 			'-S',
