@@ -1,7 +1,7 @@
-set path=.
-set path+=src
-set path+=src/spec
-set path+=.github/workflows
+set path=., " current file's directory and current directory
+set path+=src/**
+set path+=.github/**
+set path+=vim/**
 
 nnoremap <Leader>b :!npm run build<CR>
 nnoremap <Leader>d :!npx mocha --inspect-brk -- dist/spec<CR>
