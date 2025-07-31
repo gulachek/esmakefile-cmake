@@ -38,7 +38,12 @@ else
 		endif
 	else
 		" Linux
-		echo "WARNING! Update project.vim to set CLANG_CHECK=/usr/bin/clang-check-18 for Linux"
+		let clangCheck = trim(system('which clang-check-18'))
+		if executable(clangCheck)
+			let $CLANG_CHECK = clangCheck
+		else
+			echo "WARNING! Make sure clang-check is installed and set the CLANG_CHECK environment variable"
+		endif
 	endif
 endif
 endif
