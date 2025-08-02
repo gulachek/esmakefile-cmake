@@ -17,12 +17,22 @@
  * 02111-1307, USA.
  */
 
-import { cli } from 'esmakefile';
+import { cli, Path } from 'esmakefile';
+import { cmake } from './cmake.js';
+import { installUpstream } from './upstream.js';
+import { resolve, join } from 'node:path';
+
+const vendorDir = resolve('vendor');
+const vendorBuild = join(vendorDir, 'build');
 
 cli((make) => {
 	make.add('test', ['distribution-spec']);
 
-	make.add('distribution-spec', (args) => {
+	make.add('install-upstream', (args) => {
+		return installUpstream(vendorBuild, vendorDir);
+	});
+
+	make.add('distribution-spec', ['install-upstream'], (args) => {
 		const nodeExe = process.execPath;
 		const mochaJs = 'node_modules/mocha/bin/mocha.js';
 		return args.spawn(nodeExe, [mochaJs, 'dist/spec/DistributionSpec.js']);
