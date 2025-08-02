@@ -25,7 +25,7 @@ import {
 	Path,
 	BuildPathLike,
 } from 'esmakefile';
-import { mkdir, rm, writeFile, readFile } from 'node:fs/promises';
+import { mkdir, rm, writeFile, readFile, cp } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { platform } from 'node:os';
@@ -33,7 +33,6 @@ import { spawnSync } from 'node:child_process';
 import { chdir, cwd } from 'node:process';
 import { run } from './run.js';
 import { cmake } from './cmake.js';
-import { installUpstream } from './upstream.js';
 
 const testDir = resolve('.test');
 const srcDir = join(testDir, 'src');
@@ -1127,6 +1126,7 @@ describe('Distribution', function () {
 			await mkdir(pkgconfigDir, { recursive: true });
 			await mkdir(cmakeDir, { recursive: true });
 
+			await cp('vendor', join(testDir, 'vendor'), { recursive: true });
 			oldDir = cwd();
 			chdir(testDir);
 
@@ -1200,9 +1200,6 @@ describe('Distribution', function () {
 					'}',
 				);
 			});
-
-			await installUpstream(stageDir, vendorDir);
-			await rm(stageDir, { recursive: true });
 
 			const d = new Distribution(make, {
 				name: 'test',
