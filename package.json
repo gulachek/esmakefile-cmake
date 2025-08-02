@@ -6,7 +6,7 @@
 	"exports": "./dist/index.js",
 	"scripts": {
 		"build": "tsc",
-		"test": "mocha dist/spec",
+		"test": "node dist/spec/e2e.js --outdir .test",
 		"archive-src": "git archive HEAD -o source.tgz",
 		"prepack": "npm run archive-src && tsc"
 	},
