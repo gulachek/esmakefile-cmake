@@ -20,7 +20,9 @@
 import { cli } from 'esmakefile';
 
 cli((make) => {
-	make.add('test', (args) => {
+	make.add('test', ['distribution-spec']);
+
+	make.add('distribution-spec', (args) => {
 		const nodeExe = process.execPath;
 		const mochaJs = 'node_modules/mocha/bin/mocha.js';
 		return args.spawn(nodeExe, [mochaJs, 'dist/spec/DistributionSpec.js']);
