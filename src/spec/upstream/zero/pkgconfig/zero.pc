@@ -1,0 +1,5 @@
+Name: zero
+Version: 0
+Description: nada
+
+Cflags: -DZERO=0

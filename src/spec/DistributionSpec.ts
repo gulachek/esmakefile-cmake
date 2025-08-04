@@ -1132,23 +1132,6 @@ describe('Distribution', function () {
 
 			await writePath('LICENSE.txt', 'This is a test license!');
 
-			// add a silly package in pkg-config and cmake that
-			// defines ZERO
-			await writePath(
-				'vendor/lib/pkgconfig/zero.pc',
-				'Name: zero',
-				'Version: 0',
-				'Description: nada',
-				'Cflags: -DZERO=0',
-			);
-
-			await mkdir(join(cmakeDir, 'zero'));
-			await writePath(
-				'vendor/lib/cmake/zero/zero-config.cmake',
-				'add_library(zero INTERFACE)',
-				'target_compile_definitions(zero INTERFACE ZERO=0)',
-			);
-
 			await writePath(
 				'src/printv.c',
 				'#include <stdio.h>',
