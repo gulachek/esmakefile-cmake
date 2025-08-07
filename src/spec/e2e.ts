@@ -22,19 +22,32 @@ import { cmake } from './cmake.js';
 import { installUpstream } from './upstream.js';
 import { resolve, join } from 'node:path';
 
+const nodeExe = process.execPath;
 const vendorDir = resolve('vendor');
 const vendorBuild = join(vendorDir, 'build');
 
 cli((make) => {
-	make.add('test', ['distribution-spec']);
+	const aTarball = Path.build('pkg/a/a-0.1.0.tgz');
+
+	make.add('test', ['package-consumption']);
 
 	make.add('install-upstream', (args) => {
 		return installUpstream(vendorBuild, vendorDir);
 	});
 
 	make.add('distribution-spec', ['install-upstream'], (args) => {
-		const nodeExe = process.execPath;
 		const mochaJs = 'node_modules/mocha/bin/mocha.js';
 		return args.spawn(nodeExe, [mochaJs, 'dist/spec/DistributionSpec.js']);
+	});
+
+	make.add(aTarball, async (args) => {
+		return await args.spawn(nodeExe, ['dist/spec/pkg/a/make.js', '--srcdir', 'src/spec/pkg/a', '--outdir', args.abs(aTarball.dir()), aTarball.basename]);
+	});
+
+	make.add('package-consumption', [aTarball], (args) => {
+		// run packageConsumption script
+		// it runs cmake on all downstream packages
+		// it creates a distribution for different downstream
+		// packages and tests esmakefile functionality
 	});
 });
