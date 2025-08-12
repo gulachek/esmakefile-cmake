@@ -62,3 +62,49 @@ and a `CMakeLists.txt` file to test downstream consumption.
 These tests currently live in `src/spec/DistributionSpec.ts`.
 
 > **TODO**: This should be reorganized (issue 30).
+
+## Structure
+
+Due to the large number of files that are generated, this file
+serves to document the output structure of the `.test`
+directory.
+
+The main `src/spec/e2e.ts` script is run with the current
+directory (git repo root) as the `--srcdir` and the `.test`
+directory as the `--outdir`.
+
+The `.test` dir has the following structure:
+
+```
+vendor/ <-- place for upstream packages to be installed
+  include/
+  lib/
+  build/ <-- place for upstream packages to be built
+  ...
+.test/ <-- disposable generated files
+  vendor/ <-- place for generated packages to be installed
+  pkg/
+outdir)
+    pack/ <-- generating a package (esmake --outdir)
+      pkg1/
+      ...
+    unpack/ <-- unpack generated tar here
+      pkg1/
+      ...
+    build/ <-- cmake build dir pre-install
+      pkg1/
+      ...
+  downstream/ <-- place for downstream builds to go
+    d1/
+      esmake/ <-- for esmakefile builds
+      cmake/ <-- for cmake builds
+    ...
+```
+
+Upstream packages are copied from `vendor` to `.test/vendor` to
+put everything in one directory (since that's a current
+limitation **TODO**) and rebuilding/reinstalling the upstream
+packages is a waste of time because these packages are
+independent of `esmakefile-cmake`.
+
+
