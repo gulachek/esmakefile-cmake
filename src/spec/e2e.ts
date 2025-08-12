@@ -21,6 +21,7 @@ import { cli, Path } from 'esmakefile';
 import { cmake } from './cmake.js';
 import { installUpstream } from './upstream.js';
 import { resolve, join } from 'node:path';
+import { writeFile } from 'node:fs/promises';
 
 const nodeExe = process.execPath;
 const vendorDir = resolve('vendor');
@@ -28,8 +29,9 @@ const vendorBuild = join(vendorDir, 'build');
 
 cli((make) => {
 	const aTarball = Path.build('pkg/a/a-0.1.0.tgz');
+	const aCmake = Path.build('vendor/src/a/CMakeLists.txt');
 
-	make.add('test', ['package-consumption', 'distribution-spec']);
+	make.add('test', ['package-consumption']);
 
 	make.add('install-upstream', (args) => {
 		return installUpstream(vendorBuild, vendorDir);
@@ -40,11 +42,35 @@ cli((make) => {
 		return args.spawn(nodeExe, [mochaJs, 'dist/spec/DistributionSpec.js']);
 	});
 
-	make.add(aTarball, async (args) => {
-		return await args.spawn(nodeExe, ['dist/spec/pkg/a/make.js', '--srcdir', 'src/spec/pkg/a', '--outdir', args.abs(aTarball.dir()), aTarball.basename]);
+	// TODO: make this independent from distribution-spec by not deleting .test dir over and over again in that spec
+	make.add(aTarball, /*['distribution-spec'],*/ (args) => {
+		return args.spawn(nodeExe, ['dist/spec/pkg/a/make.js', '--srcdir', 'src/spec/pkg/a', '--outdir', args.abs(aTarball.dir()), aTarball.basename]);
 	});
 
-	make.add('package-consumption', ['install-upstream', aTarball], (args) => {
+	make.add(aCmake, [aTarball], async (args) => {
+		return args.spawn('tar', ['xzf', args.abs(aTarball), '-C', args.abs(aCmake.dir()), '--strip-components=1']);
+	});
+
+	make.add('package-install', [aCmake], async (args) => {
+		const cmakeTxt = Path.build('vendor/src/CMakeLists.txt');
+		const cmakeBuildDir = Path.build('pkg-cmake-build');
+		await writeFile(args.abs(cmakeTxt), [
+			'cmake_minimum_required(VERSION 3.10)',
+			'project(E2E)',
+			'add_subdirectory(a)'
+		].join('\n'));
+
+		await cmake.configure({
+			src: args.abs(cmakeTxt.dir()),
+			build: args.abs(cmakeBuildDir),
+			prefixPath: [args.abs(Path.build('vendor'))]
+		});
+
+		await cmake.build(args.abs(cmakeBuildDir), { config: 'Release' });
+		await cmake.install(args.abs(cmakeBuildDir), { prefix: args.abs(Path.build('vendor')) });
+	});
+
+	make.add('package-consumption', ['install-upstream', 'package-install'], (args) => {
 		// run packageConsumption script
 		// it runs cmake on all downstream packages
 		// it creates a distribution for different downstream
