@@ -29,7 +29,7 @@ const vendorBuild = join(vendorDir, 'build');
 cli((make) => {
 	const aTarball = Path.build('pkg/a/a-0.1.0.tgz');
 
-	make.add('test', ['package-consumption']);
+	make.add('test', ['package-consumption', 'distribution-spec']);
 
 	make.add('install-upstream', (args) => {
 		return installUpstream(vendorBuild, vendorDir);
@@ -44,7 +44,7 @@ cli((make) => {
 		return await args.spawn(nodeExe, ['dist/spec/pkg/a/make.js', '--srcdir', 'src/spec/pkg/a', '--outdir', args.abs(aTarball.dir()), aTarball.basename]);
 	});
 
-	make.add('package-consumption', [aTarball], (args) => {
+	make.add('package-consumption', ['install-upstream', aTarball], (args) => {
 		// run packageConsumption script
 		// it runs cmake on all downstream packages
 		// it creates a distribution for different downstream
