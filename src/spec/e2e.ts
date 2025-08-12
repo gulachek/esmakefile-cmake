@@ -24,8 +24,13 @@ import { resolve, join } from 'node:path';
 import { writeFile } from 'node:fs/promises';
 
 const nodeExe = process.execPath;
-const vendorDir = resolve('vendor');
-const vendorBuild = join(vendorDir, 'build');
+
+const upstreamVendorDir = resolve('vendor');
+const upstreamVendorBuildDir = join(upstreamVendorDir, 'build');
+const pkgVendorDir = Path.build('vendor');
+const pkgPackDir = Path.build('pkg/pack');
+const pkgUnpackDir = Path.build('pkg/unpack');
+const pkgBuildDir = Path.build('pkg/build');
 
 interface IRunEsmakefileOpts {
 	makeJs: PathLike,
@@ -43,17 +48,13 @@ function runEsmake(args: RecipeArgs, opts: IRunEsmakefileOpts): Promise<boolean>
 }
 
 cli((make) => {
-	const packDir = Path.build('pkg/pack');
-	const unpackDir = Path.build('pkg/unpack');
-	const pkgBuildDir = Path.build('pkg/build');
-
-	const aTarball = packDir.join('a/a-0.1.0.tgz');
-	const aCmake = unpackDir.join('a/CMakeLists.txt');
+	const aTarball = pkgPackDir.join('a/a-0.1.0.tgz');
+	const aCmake = pkgUnpackDir.join('a/CMakeLists.txt');
 
 	make.add('test', ['package-consumption']);
 
 	make.add('install-upstream', (args) => {
-		return installUpstream(vendorBuild, vendorDir);
+		return installUpstream(upstreamVendorBuildDir, upstreamVendorDir);
 	});
 
 	make.add('distribution-spec', ['install-upstream'], (args) => {
@@ -78,7 +79,7 @@ cli((make) => {
 	make.add('package-install', [aCmake], async (args) => {
 		const pkgBuild = args.abs(pkgBuildDir);
 
-		const cmakeTxt = unpackDir.join('CMakeLists.txt');
+		const cmakeTxt = pkgUnpackDir.join('CMakeLists.txt');
 		await writeFile(args.abs(cmakeTxt), [
 			'cmake_minimum_required(VERSION 3.10)',
 			'project(E2E)',
@@ -88,11 +89,11 @@ cli((make) => {
 		await cmake.configure({
 			src: args.abs(cmakeTxt.dir()),
 			build: pkgBuild,
-			prefixPath: [args.abs(Path.build('vendor'))]
+			prefixPath: [args.abs(pkgVendorDir)]
 		});
 
 		await cmake.build(pkgBuild, { config: 'Release' });
-		await cmake.install(pkgBuild, { prefix: args.abs(Path.build('vendor')) });
+		await cmake.install(pkgBuild, { prefix: args.abs(pkgVendorDir) });
 	});
 
 	make.add('package-consumption', ['install-upstream', 'package-install'], (args) => {
