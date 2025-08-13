@@ -22,6 +22,7 @@ import { cmake } from './cmake.js';
 import { installUpstream } from './upstream.js';
 import { resolve, join } from 'node:path';
 import { writeFile } from 'node:fs/promises';
+import { platform } from 'node:os';
 
 const nodeExe = process.execPath;
 
@@ -31,6 +32,14 @@ const pkgVendorDir = Path.build('vendor');
 const pkgPackDir = Path.build('pkg/pack');
 const pkgUnpackDir = Path.build('pkg/unpack');
 const pkgBuildDir = Path.build('pkg/build');
+const downstreamSrc = Path.src('src/spec/downstream');
+const downstreamDist = Path.src('dist/spec/downstream');
+const downstreamEsmakeDir = Path.build('downstream/esmake');
+const downstreamCmakeDir = Path.build('downstream/cmake');
+
+function exe(path: string): string {
+	return platform() === 'win32' ? path + '.exe' : path;
+}
 
 interface IRunEsmakefileOpts {
 	makeJs: PathLike,
@@ -51,7 +60,7 @@ cli((make) => {
 	const aTarball = pkgPackDir.join('a/a-0.1.0.tgz');
 	const aCmake = pkgUnpackDir.join('a/CMakeLists.txt');
 
-	make.add('test', ['package-consumption']);
+	make.add('test', []);
 
 	make.add('install-upstream', (args) => {
 		return installUpstream(upstreamVendorBuildDir, upstreamVendorDir);
@@ -96,7 +105,17 @@ cli((make) => {
 		await cmake.install(pkgBuild, { prefix: args.abs(pkgVendorDir) });
 	});
 
-	make.add('package-consumption', ['install-upstream', 'package-install'], (args) => {
+	const d1Esmake = downstreamEsmakeDir.join(exe('d1/d1'));
+	const d1Cmake = downstreamCmakeDir.join(exe('d1/d1'));
 
+	make.add(d1Esmake, ['install-upstream', 'package-install'], async (args) => {
+		return runEsmake(args, {
+			makeJs: downstreamDist.join('d1/make.js'),
+			srcDir: downstreamSrc.join('d1'),
+			outDir: d1Esmake.dir(),
+			target: exe('d1/d1')
+		});
 	});
+
+	make.add('test', [d1Esmake]);
 });
