@@ -993,9 +993,9 @@ describe('Distribution', function () {
 
 			it('is dynamic when default is set to dynamic', async () => {
 				await writePath(
-					'test-config.json',
+					'esmakefile-cmake.config.json',
 					JSON.stringify({
-						'build-shared-libs': true,
+						buildSharedLibs: true,
 					}),
 				);
 
@@ -1020,9 +1020,9 @@ describe('Distribution', function () {
 
 			it('is dynamic when default is set to dynamic and library has explicit default type', async () => {
 				await writePath(
-					'test-config.json',
+					'esmakefile-cmake.config.json',
 					JSON.stringify({
-						'build-shared-libs': true,
+						buildSharedLibs: true,
 					}),
 				);
 

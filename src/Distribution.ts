@@ -29,6 +29,7 @@ import {
 	IImportedLibrary,
 	ILinkedCompilation,
 } from './Library.js';
+import { IConfig, readConfigFile } from './Config.js';
 import { mkdir, copyFile, writeFile, cp } from 'node:fs/promises';
 import { chdir, cwd } from 'node:process';
 import { platform } from 'node:os';
@@ -161,6 +162,8 @@ export class Distribution {
 
 	private _compiler: ICompiler;
 	private _defaultLibraryType: ResolvedLibraryType = ResolvedLibraryType.static;
+	private _config: IConfig;
+	private _pkgSearchPaths: string[] = [];
 	private _pkg: PkgConfig;
 
 	constructor(make: Makefile, opts: IDistributionOpts) {
@@ -174,12 +177,17 @@ export class Distribution {
 		this.cStd = opts.cStd;
 		this.cxxStd = opts.cxxStd;
 
+		this._pkgSearchPaths.push(
+			// TODO - this.make.abs(Path.src('pkgconfig')) for
+			// override
+			this.make.abs(Path.build('pkgconfig')),
+			resolve('vendor/lib/pkgconfig')
+		);
+
+		this._parseConfig();
+
 		this._pkg = new PkgConfig({
-			// TODO - relative to cwd or srcdir or what?
-			searchPaths: [
-				this.make.abs(Path.build('pkgconfig')),
-				resolve('vendor/lib/pkgconfig'),
-			],
+			searchPaths: this._pkgSearchPaths
 		});
 
 		const compilerArgs: ICompilerArgs = {
@@ -196,7 +204,6 @@ export class Distribution {
 		}
 
 		this._addFile(this._license, this._license.rel());
-		this._parseConfig();
 		this._addDist();
 	}
 
@@ -434,30 +441,16 @@ export class Distribution {
 	}
 
 	private _parseConfig(): void {
-		const configFile = `${this.name}-config.json`;
-		let configContents: string = '';
-		try {
-			configContents = readFileSync(configFile, 'utf8');
-		} catch {
-			// TODO add error to Makefile if anything other than file not existing
-		}
+		// TODO add error to Makefile if anything other than file not existing
+		const config = readConfigFile(resolve('esmakefile-cmake.config.json'));
 
-		if (configContents) {
-			// this can throw. TODO to add error to Makefile
-			const config = JSON.parse(configContents);
-			const buildSharedLibs = config['build-shared-libs'];
-			switch (typeof buildSharedLibs) {
-				case 'boolean':
-				case 'undefined':
-					break;
-				default:
-					throw new Error(
-						`(${configFile}): build-shared-libs can only be boolean type`,
-					);
+		if (config) {
+			if (config.buildSharedLibs) {
+				this._defaultLibraryType = ResolvedLibraryType.dynamic;
 			}
 
-			if (buildSharedLibs) {
-				this._defaultLibraryType = ResolvedLibraryType.dynamic;
+			if (config.addPkgConfigSearchPaths) {
+				this._pkgSearchPaths.push(...config.addPkgConfigSearchPaths);
 			}
 		}
 	}

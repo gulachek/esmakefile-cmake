@@ -72,7 +72,7 @@ cli((make) => {
 	});
 
 	// TODO: make this independent from distribution-spec by not deleting .test dir over and over again in that spec
-	make.add(aTarball, /*['distribution-spec'],*/ (args) => {
+	make.add(aTarball, ['distribution-spec'], (args) => {
 		return runEsmake(args, {
 			makeJs: 'dist/spec/pkg/a/make.js',
 			srcDir: 'src/spec/pkg/a',
