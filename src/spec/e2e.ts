@@ -23,6 +23,7 @@ import { installUpstream } from './upstream.js';
 import { resolve, join } from 'node:path';
 import { writeFile } from 'node:fs/promises';
 import { platform } from 'node:os';
+import { spawn } from 'node:child_process';
 
 const nodeExe = process.execPath;
 
@@ -53,7 +54,18 @@ function runEsmake(args: RecipeArgs, opts: IRunEsmakefileOpts): Promise<boolean>
 	const outDir = Path.build(opts.outDir);
 	const srcDir = Path.src(opts.srcDir);
 
-	return args.spawn(nodeExe, [args.abs(makeJs), '--outdir', args.abs(outDir), '--srcdir', args.abs(srcDir), opts.target]);
+
+	const proc = spawn(nodeExe, [args.abs(makeJs), '--outdir', args.abs(outDir), '--srcdir', args.abs(srcDir), opts.target], { stdio: 'pipe', cwd: '.test' });
+
+	proc.stdout.pipe(args.logStream, { end: false });
+	proc.stderr.pipe(args.logStream, { end: false });
+
+	return new Promise<boolean>((res) => {
+		proc.on('close', (code) => {
+			args.logStream.end();
+			res(code === 0);
+		});
+	});
 }
 
 cli((make) => {
