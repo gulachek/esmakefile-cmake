@@ -62,7 +62,6 @@ function runEsmake(args: RecipeArgs, opts: IRunEsmakefileOpts): Promise<boolean>
 
 	return new Promise<boolean>((res) => {
 		proc.on('close', (code) => {
-			args.logStream.end();
 			res(code === 0);
 		});
 	});
@@ -117,17 +116,24 @@ cli((make) => {
 		await cmake.install(pkgBuild, { prefix: args.abs(pkgVendorDir) });
 	});
 
-	const d1Esmake = downstreamEsmakeDir.join(exe('d1/d1'));
+	const d1Esmake = downstreamEsmakeDir.join(exe('d1/d1/d1'));
 	const d1Cmake = downstreamCmakeDir.join(exe('d1/d1'));
 
 	make.add(d1Esmake, ['install-upstream', 'package-install'], async (args) => {
-		return runEsmake(args, {
+		const success = await runEsmake(args, {
 			makeJs: downstreamDist.join('d1/make.js'),
 			srcDir: downstreamSrc.join('d1'),
-			outDir: d1Esmake.dir(),
+			outDir: d1Esmake.dir().dir(),
 			target: exe('d1/d1')
 		});
+
+		if (!success)
+			return false;
+
+		return args.spawn(args.abs(d1Esmake), []);
 	});
+
+	
 
 	make.add('test', [d1Esmake]);
 });
