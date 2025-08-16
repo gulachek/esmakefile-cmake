@@ -77,7 +77,14 @@ describe('Distribution', function () {
 	this.timeout(60000); // 2 sec too short for these specs. MS cmake config takes ~20s
 	let make: Makefile;
 
+	const allNames = new Set<string>();
+
 	function test(name: string, impl: () => Promise<void>) {
+		if (allNames.has(name)) {
+			throw new Error(`Duplicate name '${name}' passed to test(...)`);
+		}
+		allNames.add(name);
+
 		it(name, async () => {
 			make = new Makefile({
 				srcRoot: testDir,
