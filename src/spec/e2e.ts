@@ -71,7 +71,7 @@ cli((make) => {
 	const aTarball = pkgPackDir.join('a/a-0.1.0.tgz');
 	const aCmake = pkgUnpackDir.join('a/CMakeLists.txt');
 
-	make.add('test', []);
+	make.add('test', ['dev', 'pkg']);
 
 	make.add('install-upstream', (args) => {
 		return installUpstream(upstreamVendorBuildDir, upstreamVendorDir);
@@ -81,6 +81,8 @@ cli((make) => {
 		const mochaJs = 'node_modules/mocha/bin/mocha.js';
 		return args.spawn(nodeExe, [mochaJs, 'dist/spec/DistributionSpec.js']);
 	});
+
+	make.add('dev', ['distribution-spec'], () => {});
 
 	// TODO: make this independent from distribution-spec by not deleting .test dir over and over again in that spec
 	make.add(aTarball, ['distribution-spec'], (args) => {
@@ -135,5 +137,5 @@ cli((make) => {
 
 	
 
-	make.add('test', [d1Esmake]);
+	make.add('pkg', [d1Esmake], () => {});
 });
