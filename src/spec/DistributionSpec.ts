@@ -77,6 +77,25 @@ describe('Distribution', function () {
 	this.timeout(60000); // 2 sec too short for these specs. MS cmake config takes ~20s
 	let make: Makefile;
 
+	function test(name: string, impl: () => Promise<void>) {
+		it(name, async () => {
+			make = new Makefile({
+				srcRoot: testDir,
+				buildRoot: buildDir,
+			});
+
+			await mkdir(includeDir, { recursive: true });
+			await mkdir(srcDir, { recursive: true });
+			const prevDir = cwd();
+			chdir(testDir);
+
+			await impl();
+
+			chdir(prevDir);
+			await rm(testDir, { recursive: true });
+		});
+	}
+
 	function writePath(src: PathLike, ...lines: string[]): Promise<void> {
 		let sep = platform() === 'win32' ? '\r\n' : '\n';
 		return writeFile(make.abs(Path.src(src)), lines.join(sep), 'utf8');
@@ -115,26 +134,9 @@ describe('Distribution', function () {
 	}
 
 	describe('development', () => {
-		let prevDir: string = '';
 
-		beforeEach(async () => {
-			make = new Makefile({
-				srcRoot: testDir,
-				buildRoot: buildDir,
-			});
-
-			await mkdir(includeDir, { recursive: true });
-			await mkdir(srcDir, { recursive: true });
-			prevDir = cwd();
-			chdir(testDir);
-		});
-
-		afterEach(async () => {
-			chdir(prevDir);
-			await rm(testDir, { recursive: true });
-		});
-
-		it('builds a single file executable', async () => {
+		// builds a single file executable
+		test('single-file-exe', async () => {
 			await writePath(
 				'src/hello.c',
 				'#include <stdio.h>',
@@ -154,7 +156,8 @@ describe('Distribution', function () {
 			await expectOutput(hello.binary, 'hello!');
 		});
 
-		it('updates when source updates', async () => {
+		// updates when source updates
+		test('src-is-prereq', async () => {
 			await writePath(
 				'src/hello.c',
 				'#include <stdio.h>',
@@ -182,7 +185,8 @@ describe('Distribution', function () {
 			await expectOutput(hello.binary, 'hi.');
 		});
 
-		it('can compile multiple source file exe', async () => {
+		// can compile multiple source file exe
+		test('multi-src-exe', async () => {
 			await writePath(
 				'src/hello.c',
 				'#include <stdio.h>',
@@ -208,7 +212,8 @@ describe('Distribution', function () {
 			await expectOutput(hello.binary, 'hello!');
 		});
 
-		it('links mixed c/c++ as a c++ executable', async () => {
+		// links mixed c/c++ as a c++ executable
+		test('mixed-lang-exe', async () => {
 			await writePath(
 				'src/hello.cpp',
 				'#include <iostream>',
@@ -234,7 +239,8 @@ describe('Distribution', function () {
 			await expectOutput(hello.binary, 'hello!');
 		});
 
-		it('links mixed c/c++ as a c++ library', async () => {
+		// links mixed c/c++ as a c++ library
+		test('mixed-lang-lib', async () => {
 			await writePath(
 				'src/one.cpp',
 				'#include <string>',
@@ -275,7 +281,8 @@ describe('Distribution', function () {
 			await expectOutput(main.binary, '2');
 		});
 
-		it('can specify c11', async () => {
+		// can specify c11
+		test('c11-lang', async () => {
 			await writePath(
 				'src/printv.c',
 				'#include <stdio.h>',
@@ -299,7 +306,8 @@ describe('Distribution', function () {
 			await expectOutput(t.binary, '201112');
 		});
 
-		it('can specify c17', async () => {
+		// can specify c17
+		test('c17-lang', async () => {
 			await writePath(
 				'src/printv.c',
 				'#include <stdio.h>',
@@ -323,7 +331,8 @@ describe('Distribution', function () {
 			await expectOutput(t.binary, '201710');
 		});
 
-		it('can specify c++17', async () => {
+		// can specify c++17
+		test('cxx17-lang', async () => {
 			await writePath(
 				'src/printv.cpp',
 				'#include <cstdio>',
@@ -348,7 +357,8 @@ describe('Distribution', function () {
 			await expectOutput(t.binary, '201703');
 		});
 
-		it('can specify c++20', async () => {
+		// can specify c++20
+		test('cxx20-lang', async () => {
 			await writePath(
 				'src/printv.cpp',
 				'#include <cstdio>',
@@ -373,7 +383,8 @@ describe('Distribution', function () {
 			await expectOutput(t.binary, '202002');
 		});
 
-		it('includes the "include" dir by default', async () => {
+		// includes the "include" dir by default
+		test('default-include', async () => {
 			await writePath('include/val.h', '#define VAL 4');
 
 			await writePath(
@@ -396,7 +407,8 @@ describe('Distribution', function () {
 			await expectOutput(hello.binary, '4');
 		});
 
-		it('recompiles after updating header', async () => {
+		// recompiles after updating header
+		test('header-is-postreq', async () => {
 			await writePath('include/val.h', '#define VAL 4');
 
 			await writePath(
@@ -422,7 +434,8 @@ describe('Distribution', function () {
 			await expectOutput(hello.binary, '5');
 		});
 
-		it('compiles and links libraries', async () => {
+		// compiles and links libraries
+		test('links-transitive-lib', async () => {
 			await writePath('include/add.h', 'int add(int a, int b);');
 
 			await writePath('include/zero.h', 'int zero();');
@@ -471,7 +484,8 @@ describe('Distribution', function () {
 			await expectOutput(test.binary, '4');
 		});
 
-		it('carries includes from linked libraries', async () => {
+		// carries includes from linked libraries
+		test('includes-dependency-header', async () => {
 			const customInclude = join(testDir, 'custom-include');
 			await mkdir(customInclude);
 
@@ -510,225 +524,242 @@ describe('Distribution', function () {
 			await expectOutput(test.binary, '4');
 		});
 
-		describe('external packages', () => {
-			beforeEach(async () => {
-				// General strategy - build one distribution and hand-craft
-				// pkgconfig file to that distribution's build. Can test
-				// generation of installed pkgconfig in installation tests
-				await mkdir(join(testDir, 'dep', 'include'), { recursive: true });
-				await mkdir(join(testDir, 'dep', 'src'));
-				await mkdir(pkgconfigDir, { recursive: true });
+		async function setupExternal() {
+			// General strategy - build one distribution and hand-craft
+			// pkgconfig file to that distribution's build. Can test
+			// generation of installed pkgconfig in installation tests
+			await mkdir(join(testDir, 'dep', 'include'), { recursive: true });
+			await mkdir(join(testDir, 'dep', 'src'));
+			await mkdir(pkgconfigDir, { recursive: true });
 
-				const dep = new Distribution(make, {
-					name: 'dep',
-					version: '2.3.4',
-				});
-
-				await writePath('dep/include/add.h', 'int add(int a, int b);');
-
-				await writePath(
-					'dep/src/add.c',
-					'#include "add.h"',
-					'int add(int a, int b){ return a + b; }',
-				);
-
-				const add = dep.addLibrary({
-					name: 'add',
-					src: ['dep/src/add.c'],
-					includeDirs: ['dep/include'],
-				});
-
-				await updateTarget(make, add.binary);
-
-				const depInclude = make.abs(Path.src('dep/include'));
-				const libDir = make.abs(add.binary.dir());
-				let cflags = `-I${depInclude}`;
-				let libs = `-L${libDir} -ladd`;
-				if (platform() === 'win32') {
-					cflags = `/I${depInclude.replace(/\\/g, '\\\\')}`;
-					libs = make.abs(add.binary).replace(/\\/g, '\\\\');
-				}
-
-				await writePath(
-					'vendor/lib/pkgconfig/add.pc',
-					'Name: add',
-					'Version: 2.3.4',
-					'Description: add two integers',
-					`Cflags: ${cflags}`,
-					`Libs: ${libs}`,
-				);
-
-				await writePath(
-					'src/test.c',
-					'#include <add.h>',
-					'#include <stdio.h>',
-					'int main() { printf("2+2=%d", add(2,2)); return 0; }',
-				);
+			const dep = new Distribution(make, {
+				name: 'dep',
+				version: '2.3.4',
 			});
 
-			it('can find an external package for linking', async () => {
-				const d = new Distribution(make, {
-					name: 'test',
-					version: '1.2.3',
-				});
+			await writePath('dep/include/add.h', 'int add(int a, int b);');
 
-				const addPkg = d.findPackage('add');
+			await writePath(
+				'dep/src/add.c',
+				'#include "add.h"',
+				'int add(int a, int b){ return a + b; }',
+			);
 
-				const test = d.addExecutable({
-					name: 'test',
-					src: ['src/test.c'],
-					linkTo: [addPkg],
-				});
-
-				await expectOutput(test.binary, '2+2=4');
+			const add = dep.addLibrary({
+				name: 'add',
+				src: ['dep/src/add.c'],
+				includeDirs: ['dep/include'],
 			});
 
-			it('can specify a pkgconfig version', async () => {
-				const d = new Distribution(make, {
-					name: 'test',
-					version: '1.2.3',
-				});
+			await updateTarget(make, add.binary);
 
-				const addPkg = d.findPackage({
-					pkgconfig: 'add = 2.3.4',
-				});
+			const depInclude = make.abs(Path.src('dep/include'));
+			const libDir = make.abs(add.binary.dir());
+			let cflags = `-I${depInclude}`;
+			let libs = `-L${libDir} -ladd`;
+			if (platform() === 'win32') {
+				cflags = `/I${depInclude.replace(/\\/g, '\\\\')}`;
+				libs = make.abs(add.binary).replace(/\\/g, '\\\\');
+			}
 
-				const test = d.addExecutable({
-					name: 'test',
-					src: ['src/test.c'],
-					linkTo: [addPkg],
-				});
+			await writePath(
+				'vendor/lib/pkgconfig/add.pc',
+				'Name: add',
+				'Version: 2.3.4',
+				'Description: add two integers',
+				`Cflags: ${cflags}`,
+				`Libs: ${libs}`,
+			);
 
-				await expectOutput(test.binary, '2+2=4');
+			await writePath(
+				'src/test.c',
+				'#include <add.h>',
+				'#include <stdio.h>',
+				'int main() { printf("2+2=%d", add(2,2)); return 0; }',
+			);
+		}
+
+		// can find an external package for linking
+		test('link-pkgconfig', async () => {
+			await setupExternal();
+
+			const d = new Distribution(make, {
+				name: 'test',
+				version: '1.2.3',
 			});
 
-			it('fails if incompatible version specified', async () => {
-				const d = new Distribution(make, {
-					name: 'test',
-					version: '1.2.3',
-				});
+			const addPkg = d.findPackage('add');
 
-				const addPkg = d.findPackage({
-					pkgconfig: 'add < 2.3.4',
-				});
-
-				const test = d.addExecutable({
-					name: 'test',
-					src: ['src/test.c'],
-					linkTo: [addPkg],
-				});
-
-				const { result } = await experimental.updateTarget(make, test.binary);
-				expect(result).to.be.false;
+			const test = d.addExecutable({
+				name: 'test',
+				src: ['src/test.c'],
+				linkTo: [addPkg],
 			});
 
-			it('can specify an external package for linking differently between pkgconfig and cmake', async () => {
-				const d = new Distribution(make, {
-					name: 'test',
-					version: '1.2.3',
-				});
-
-				const addPkg = d.findPackage({
-					pkgconfig: 'add',
-					cmake: 'not-used-in-test',
-				});
-
-				const test = d.addExecutable({
-					name: 'test',
-					src: ['src/test.c'],
-					linkTo: [addPkg],
-				});
-
-				await expectOutput(test.binary, '2+2=4');
-			});
-
-			it('can find an external package for linking to a library', async () => {
-				const d = new Distribution(make, {
-					name: 'test',
-					version: '1.2.3',
-				});
-
-				const addPkg = d.findPackage('add');
-
-				await writePath(
-					'include/mul.h',
-					...defineExport,
-					'EXPORT int mul(int a, int b);',
-				);
-
-				await writePath(
-					'src/mul.c',
-					'#include "mul.h"',
-					'#include <add.h>',
-					'int mul(int a, int b) {',
-					' int sum = 0;',
-					' for(int i = 0; i < a; ++i) {',
-					'  sum = add(sum, b);',
-					' }',
-					' return sum;',
-					'}',
-				);
-
-				await writePath(
-					'src/test.c',
-					'#include "mul.h"',
-					'#include <stdio.h>',
-					'int main() { printf("2*3=%d", mul(2,3)); return 0; }',
-				);
-
-				const mul = d.addLibrary({
-					name: 'mul',
-					src: ['src/mul.c'],
-					linkTo: [addPkg],
-					type: LibraryType.dynamic,
-				});
-
-				const test = d.addExecutable({
-					name: 'test',
-					src: ['src/test.c'],
-					linkTo: [mul],
-				});
-
-				await expectOutput(test.binary, '2*3=6');
-			});
-
-			it('can specify a CMake version', async () => {
-				await writePath('LICENSE.txt', 'Test license');
-
-				const d = new Distribution(make, {
-					name: 'test',
-					version: '1.2.3',
-				});
-
-				const addPkg = d.findPackage({
-					pkgconfig: 'add',
-					cmake: {
-						packageName: 'add',
-						version: '2.3.4',
-						libraryTarget: 'add',
-					},
-				});
-
-				d.addExecutable({
-					name: 'test',
-					src: ['src/test.c'],
-					linkTo: [addPkg],
-				});
-
-				await updateTarget(make, d.dist);
-
-				const cmake = Path.build('test-1.2.3/CMakeLists.txt');
-				const cmakeContents = await readFile(make.abs(cmake), 'utf8');
-
-				const lines = cmakeContents.split('\n');
-				const re = /^find_package\(add\s+2.3.4\s+REQUIRED\)$/;
-				const l = lines.find((l) => l.match(re));
-
-				expect(l, 'Did not find match').not.to.be.empty;
-			});
+			await expectOutput(test.binary, '2+2=4');
 		});
 
-		it('can link between distributions', async () => {
+		// can specify a pkgconfig version
+		test('specify-pkgconfig-version', async () => {
+			await setupExternal();
+
+			const d = new Distribution(make, {
+				name: 'test',
+				version: '1.2.3',
+			});
+
+			const addPkg = d.findPackage({
+				pkgconfig: 'add = 2.3.4',
+			});
+
+			const test = d.addExecutable({
+				name: 'test',
+				src: ['src/test.c'],
+				linkTo: [addPkg],
+			});
+
+			await expectOutput(test.binary, '2+2=4');
+		});
+
+		// fails if incompatible version specified
+		test('fails-pkgconfig-version-incompatible', async () => {
+			await setupExternal();
+
+			const d = new Distribution(make, {
+				name: 'test',
+				version: '1.2.3',
+			});
+
+			const addPkg = d.findPackage({
+				pkgconfig: 'add < 2.3.4',
+			});
+
+			const test = d.addExecutable({
+				name: 'test',
+				src: ['src/test.c'],
+				linkTo: [addPkg],
+			});
+
+			const { result } = await experimental.updateTarget(make, test.binary);
+			expect(result).to.be.false;
+		});
+
+		// can specify an external package for linking differently between pkgconfig and cmake
+		test('cmake-pkgconfig-different-name', async () => {
+			await setupExternal();
+
+			const d = new Distribution(make, {
+				name: 'test',
+				version: '1.2.3',
+			});
+
+			const addPkg = d.findPackage({
+				pkgconfig: 'add',
+				cmake: 'not-used-in-test',
+			});
+
+			const test = d.addExecutable({
+				name: 'test',
+				src: ['src/test.c'],
+				linkTo: [addPkg],
+			});
+
+			await expectOutput(test.binary, '2+2=4');
+		});
+
+		// can find an external package for linking to a library
+		test('link-pkgconfig-lib', async () => {
+			await setupExternal();
+
+			const d = new Distribution(make, {
+				name: 'test',
+				version: '1.2.3',
+			});
+
+			const addPkg = d.findPackage('add');
+
+			await writePath(
+				'include/mul.h',
+				...defineExport,
+				'EXPORT int mul(int a, int b);',
+			);
+
+			await writePath(
+				'src/mul.c',
+				'#include "mul.h"',
+				'#include <add.h>',
+				'int mul(int a, int b) {',
+				' int sum = 0;',
+				' for(int i = 0; i < a; ++i) {',
+				'  sum = add(sum, b);',
+				' }',
+				' return sum;',
+				'}',
+			);
+
+			await writePath(
+				'src/test.c',
+				'#include "mul.h"',
+				'#include <stdio.h>',
+				'int main() { printf("2*3=%d", mul(2,3)); return 0; }',
+			);
+
+			const mul = d.addLibrary({
+				name: 'mul',
+				src: ['src/mul.c'],
+				linkTo: [addPkg],
+				type: LibraryType.dynamic,
+			});
+
+			const test = d.addExecutable({
+				name: 'test',
+				src: ['src/test.c'],
+				linkTo: [mul],
+			});
+
+			await expectOutput(test.binary, '2*3=6');
+		});
+
+		// can specify a CMake version
+		test('cmake-find-package-version', async () => {
+			await setupExternal();
+
+			await writePath('LICENSE.txt', 'Test license');
+
+			const d = new Distribution(make, {
+				name: 'test',
+				version: '1.2.3',
+			});
+
+			const addPkg = d.findPackage({
+				pkgconfig: 'add',
+				cmake: {
+					packageName: 'add',
+					version: '2.3.4',
+					libraryTarget: 'add',
+				},
+			});
+
+			d.addExecutable({
+				name: 'test',
+				src: ['src/test.c'],
+				linkTo: [addPkg],
+			});
+
+			await updateTarget(make, d.dist);
+
+			const cmake = Path.build('test-1.2.3/CMakeLists.txt');
+			const cmakeContents = await readFile(make.abs(cmake), 'utf8');
+
+			const lines = cmakeContents.split('\n');
+			const re = /^find_package\(add\s+2.3.4\s+REQUIRED\)$/;
+			const l = lines.find((l) => l.match(re));
+
+			expect(l, 'Did not find match').not.to.be.empty;
+		});
+
+		// can link between distributions
+		test('cross-distribution-link', async () => {
 			await mkdir(join(testDir, 'a', 'include'), { recursive: true });
 			await mkdir(join(testDir, 'b', 'include'), { recursive: true });
 
@@ -788,7 +819,8 @@ describe('Distribution', function () {
 			await expectOutput(main.binary, 'b');
 		});
 
-		it('can add a unit test executable', async () => {
+		// can add a unit test executable
+		test('unit-test-run', async () => {
 			await mkdir(join(testDir, 'test'));
 			await writePath('include/add.h', 'int add(int a, int b);');
 			await writePath('src/add.c', 'int add(int a, int b) { return a + b; }');
@@ -826,7 +858,8 @@ describe('Distribution', function () {
 			await updateTarget(make, 'test-add');
 		});
 
-		it('has access to unit test executable via binary', async () => {
+		// has access to unit test executable via binary
+		test('unit-test-binary', async () => {
 			await mkdir(join(testDir, 'test'));
 			await writePath('include/add.h', 'int add(int a, int b);');
 			await writePath('src/add.c', 'int add(int a, int b) { return a + b; }');
@@ -858,196 +891,213 @@ describe('Distribution', function () {
 			await expectOutput(binary, '');
 		});
 
-		describe('static vs dynamic', () => {
-			beforeEach(async () => {
-				await writePath(
-					'include/image_name.h',
-					...defineExport,
-					'EXPORT int image_name(char *dst, int sz);',
-				);
+		async function setupStaticDynamic() {
+			await writePath(
+				'include/image_name.h',
+				...defineExport,
+				'EXPORT int image_name(char *dst, int sz);',
+			);
 
-				await writePath(
-					'src/image_name.c',
-					'#ifdef __linux__',
-					'#define _GNU_SOURCE', // needed for Dl_info
-					'#endif',
-					'#include <string.h>',
-					'#include "image_name.h"',
-					'#ifdef _WIN32',
-					'#include <windows.h>',
-					'int image_name(char *dst, int sz){',
-					' HMODULE module;',
-					' GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, (LPCSTR)image_name, &module);',
-					' GetModuleFileNameA(module, dst, sz);',
-					' return 1;',
-					'}',
-					'#else',
-					'#include <dlfcn.h>',
-					'int image_name(char *dst, int sz){',
-					'	Dl_info info;',
-					'	if (dladdr(image_name, &info)){',
-					'		strlcpy(dst, info.dli_fname, sz);',
-					'		return 1;',
-					'	} else {',
-					'		return 0;',
-					'	}',
-					'}',
-					'#endif',
-				);
+			await writePath(
+				'src/image_name.c',
+				'#ifdef __linux__',
+				'#define _GNU_SOURCE', // needed for Dl_info
+				'#endif',
+				'#include <string.h>',
+				'#include "image_name.h"',
+				'#ifdef _WIN32',
+				'#include <windows.h>',
+				'int image_name(char *dst, int sz){',
+				' HMODULE module;',
+				' GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, (LPCSTR)image_name, &module);',
+				' GetModuleFileNameA(module, dst, sz);',
+				' return 1;',
+				'}',
+				'#else',
+				'#include <dlfcn.h>',
+				'int image_name(char *dst, int sz){',
+				'	Dl_info info;',
+				'	if (dladdr(image_name, &info)){',
+				'		strlcpy(dst, info.dli_fname, sz);',
+				'		return 1;',
+				'	} else {',
+				'		return 0;',
+				'	}',
+				'}',
+				'#endif',
+			);
 
-				await writePath(
-					'src/main.c',
-					'#include "image_name.h"',
-					'#include <stdio.h>',
-					'int main(){',
-					'	char buf[1024];',
-					'	if (!image_name(buf, sizeof(buf))) return 1;',
-					'	printf("%s", buf);',
-					'	return 0;',
-					'}',
-				);
+			await writePath(
+				'src/main.c',
+				'#include "image_name.h"',
+				'#include <stdio.h>',
+				'int main(){',
+				'	char buf[1024];',
+				'	if (!image_name(buf, sizeof(buf))) return 1;',
+				'	printf("%s", buf);',
+				'	return 0;',
+				'}',
+			);
+		}
+
+		// is static by default
+		test('default-static', async () => {
+			await setupStaticDynamic();
+
+			const d = new Distribution(make, {
+				name: 'test',
+				version: '1.2.3',
 			});
 
-			it('is static by default', async () => {
-				const d = new Distribution(make, {
-					name: 'test',
-					version: '1.2.3',
-				});
-
-				const img = d.addLibrary({
-					name: 'image_name',
-					src: ['src/image_name.c'],
-				});
-
-				const test = d.addExecutable({
-					name: 'test',
-					src: ['src/main.c'],
-					linkTo: [img],
-				});
-
-				await expectOutput(test.binary, make.abs(test.binary));
+			const img = d.addLibrary({
+				name: 'image_name',
+				src: ['src/image_name.c'],
 			});
 
-			it('is static when explicitly set to default type', async () => {
-				const d = new Distribution(make, {
-					name: 'test',
-					version: '1.2.3',
-				});
-
-				const img = d.addLibrary({
-					name: 'image_name',
-					src: ['src/image_name.c'],
-					type: LibraryType.default,
-				});
-
-				const test = d.addExecutable({
-					name: 'test',
-					src: ['src/main.c'],
-					linkTo: [img],
-				});
-
-				await expectOutput(test.binary, make.abs(test.binary));
+			const test = d.addExecutable({
+				name: 'test',
+				src: ['src/main.c'],
+				linkTo: [img],
 			});
 
-			it('is static when explicitly set to static', async () => {
-				const d = new Distribution(make, {
-					name: 'test',
-					version: '1.2.3',
-				});
-
-				const img = d.addLibrary({
-					name: 'image_name',
-					src: ['src/image_name.c'],
-					type: LibraryType.static,
-				});
-
-				const test = d.addExecutable({
-					name: 'test',
-					src: ['src/main.c'],
-					linkTo: [img],
-				});
-
-				await expectOutput(test.binary, make.abs(test.binary));
-			});
-
-			it('is dynamic when explicitly set to dynamic', async () => {
-				const d = new Distribution(make, {
-					name: 'test',
-					version: '1.2.3',
-				});
-
-				const img = d.addLibrary({
-					name: 'image_name',
-					src: ['src/image_name.c'],
-					type: LibraryType.dynamic,
-				});
-
-				const test = d.addExecutable({
-					name: 'test',
-					src: ['src/main.c'],
-					linkTo: [img],
-				});
-
-				await expectOutput(test.binary, make.abs(img.binary));
-			});
-
-			it('is dynamic when default is set to dynamic', async () => {
-				await writePath(
-					'esmakefile-cmake.config.json',
-					JSON.stringify({
-						buildSharedLibs: true,
-					}),
-				);
-
-				const d = new Distribution(make, {
-					name: 'test',
-					version: '1.2.3',
-				});
-
-				const img = d.addLibrary({
-					name: 'image_name',
-					src: ['src/image_name.c'],
-				});
-
-				const test = d.addExecutable({
-					name: 'test',
-					src: ['src/main.c'],
-					linkTo: [img],
-				});
-
-				await expectOutput(test.binary, make.abs(img.binary));
-			});
-
-			it('is dynamic when default is set to dynamic and library has explicit default type', async () => {
-				await writePath(
-					'esmakefile-cmake.config.json',
-					JSON.stringify({
-						buildSharedLibs: true,
-					}),
-				);
-
-				const d = new Distribution(make, {
-					name: 'test',
-					version: '1.2.3',
-				});
-
-				const img = d.addLibrary({
-					name: 'image_name',
-					src: ['src/image_name.c'],
-					type: LibraryType.default,
-				});
-
-				const test = d.addExecutable({
-					name: 'test',
-					src: ['src/main.c'],
-					linkTo: [img],
-				});
-
-				await expectOutput(test.binary, make.abs(img.binary));
-			});
+			await expectOutput(test.binary, make.abs(test.binary));
 		});
 
-		it('generates a compile_commands.json file', async () => {
+		// is static when explicitly set to default type
+		test('explicit-default-static', async () => {
+			await setupStaticDynamic();
+
+			const d = new Distribution(make, {
+				name: 'test',
+				version: '1.2.3',
+			});
+
+			const img = d.addLibrary({
+				name: 'image_name',
+				src: ['src/image_name.c'],
+				type: LibraryType.default,
+			});
+
+			const test = d.addExecutable({
+				name: 'test',
+				src: ['src/main.c'],
+				linkTo: [img],
+			});
+
+			await expectOutput(test.binary, make.abs(test.binary));
+		});
+
+		// is static when explicitly set to static
+		test('static-static', async () => {
+			await setupStaticDynamic();
+
+			const d = new Distribution(make, {
+				name: 'test',
+				version: '1.2.3',
+			});
+
+			const img = d.addLibrary({
+				name: 'image_name',
+				src: ['src/image_name.c'],
+				type: LibraryType.static,
+			});
+
+			const test = d.addExecutable({
+				name: 'test',
+				src: ['src/main.c'],
+				linkTo: [img],
+			});
+
+			await expectOutput(test.binary, make.abs(test.binary));
+		});
+
+		// is dynamic when explicitly set to dynamic
+		test('dynamic-dynamic', async () => {
+			await setupStaticDynamic();
+
+			const d = new Distribution(make, {
+				name: 'test',
+				version: '1.2.3',
+			});
+
+			const img = d.addLibrary({
+				name: 'image_name',
+				src: ['src/image_name.c'],
+				type: LibraryType.dynamic,
+			});
+
+			const test = d.addExecutable({
+				name: 'test',
+				src: ['src/main.c'],
+				linkTo: [img],
+			});
+
+			await expectOutput(test.binary, make.abs(img.binary));
+		});
+
+		// is dynamic when default is set to dynamic
+		test('default-dynamic', async () => {
+			await setupStaticDynamic();
+
+			await writePath(
+				'esmakefile-cmake.config.json',
+				JSON.stringify({
+					buildSharedLibs: true,
+				}),
+			);
+
+			const d = new Distribution(make, {
+				name: 'test',
+				version: '1.2.3',
+			});
+
+			const img = d.addLibrary({
+				name: 'image_name',
+				src: ['src/image_name.c'],
+			});
+
+			const test = d.addExecutable({
+				name: 'test',
+				src: ['src/main.c'],
+				linkTo: [img],
+			});
+
+			await expectOutput(test.binary, make.abs(img.binary));
+		});
+
+		// is dynamic when default is set to dynamic and library has explicit default type
+		test('explicit-default-dynamic', async () => {
+			await setupStaticDynamic();
+
+			await writePath(
+				'esmakefile-cmake.config.json',
+				JSON.stringify({
+					buildSharedLibs: true,
+				}),
+			);
+
+			const d = new Distribution(make, {
+				name: 'test',
+				version: '1.2.3',
+			});
+
+			const img = d.addLibrary({
+				name: 'image_name',
+				src: ['src/image_name.c'],
+				type: LibraryType.default,
+			});
+
+			const test = d.addExecutable({
+				name: 'test',
+				src: ['src/main.c'],
+				linkTo: [img],
+			});
+
+			await expectOutput(test.binary, make.abs(img.binary));
+		});
+
+		// generates a compile_commands.json file
+		test('compile-commands', async () => {
 			await mkdir(pkgconfigDir, { recursive: true });
 
 			const add = Path.src('src/add.c');
