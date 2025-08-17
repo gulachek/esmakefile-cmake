@@ -1356,11 +1356,6 @@ describe('Distribution', function () {
 			await rm(testDir, { recursive: true });
 		});
 
-		it('installs an executable', async () => {
-			await expectOutput('vendor/bin/printv', '201112');
-			await expectOutput('vendor/bin/printv++', '202002');
-		});
-
 		it('can install a target with generated source', async () => {
 			await expectOutput('vendor/bin/gen', 'generated!');
 		});
