@@ -118,6 +118,10 @@ cli((make) => {
 		await cmake.install(pkgBuild, { prefix: args.abs(pkgVendorDir) });
 	});
 
+	make.add('run-e1', ['package-install'], async (args) => {
+		return args.spawn(args.abs(Path.build(exe('vendor/bin/e1'))), []);
+	});
+
 	const d1Esmake = downstreamEsmakeDir.join(exe('d1/d1/d1'));
 	const d1Cmake = downstreamCmakeDir.join(exe('d1/d1'));
 
@@ -135,5 +139,5 @@ cli((make) => {
 		return args.spawn(args.abs(d1Esmake), []);
 	});
 
-	make.add('pkg', [d1Esmake], () => {});
+	make.add('pkg', [d1Esmake, 'run-e1'], () => {});
 });

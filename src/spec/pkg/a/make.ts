@@ -26,6 +26,11 @@ cli((make) => {
 		version: '0.1.0'
 	});
 
+	d.addExecutable({
+		name: 'e1',
+		src: ['src/e1.c']
+	});
+
 	d.addLibrary({
 		name: 'a',
 		src: ['src/a.c']
