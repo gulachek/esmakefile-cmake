@@ -22,8 +22,72 @@ import { cmake } from './cmake.js';
 import { installUpstream } from './upstream.js';
 import { resolve, join } from 'node:path';
 import { writeFile } from 'node:fs/promises';
+import { readFileSync } from 'node:fs';
 import { platform } from 'node:os';
 import { spawn } from 'node:child_process';
+import * as yaml from 'yaml';
+
+interface TestCase {
+	id: string;
+	prose: string;
+}
+
+function parsePlan(obj: unknown, path: string[], plan: Map<string, TestCase>): void {
+	if (!(obj && typeof obj === 'object')) {
+		throw new Error(`Error parsing plan.yaml. Value at path '${path}' is not an object.`);
+	}
+
+	if ('group' in obj) {
+		const group = obj['group'];
+		if (typeof group !== 'string') {
+			throw new Error(`Error parsing plan.yaml. 'group' at path '${path}' is not a string.`);
+		}
+
+		const groupPath = [...path, group];
+
+		if (!('plan' in obj)) {
+			throw new Error(`Error parsing plan.yaml. 'plan' for group '${groupPath.join('.')}' does not exist.`);
+		}
+
+		const groupPlan = obj['plan'];
+		if (!Array.isArray(groupPlan)) {
+			throw new Error(`Error parsing plan.yaml. 'plan' for group '${groupPath.join('.')}' is not an Array.`);
+		}
+
+		for (const child of groupPlan) {
+			parsePlan(child, groupPath, plan);
+		}
+	} else if ('case' in obj) {
+		const testCase = obj['case'];
+		if (typeof testCase !== 'string') {
+			throw new Error(`Error parsing plan.yaml. 'case' at path '${path}' is not a string.`);
+		}
+
+		const id = [...path, testCase].join('.');
+
+		if (plan.has(id)) {
+			throw new Error(`Error parsing plan.yaml. Test case '${id}' has multiple definitions.`);
+		}
+
+		if (!('prose' in obj && typeof obj['prose'] === 'string')) {
+			throw new Error(`Error parsing plan.yaml. 'prose' for case '${id}' is either missing or not a string.`);
+		}
+
+		const prose = obj['prose'];
+
+		plan.set(id, { id, prose });
+	} else {
+		throw new Error(`Error parsing plan.yaml. Object at path '${path}' has neither a 'group' nor a 'case' definition.`);
+	}
+}
+
+const planYaml = readFileSync('src/spec/plan.yaml', 'utf8');
+const plan = new Map<string, TestCase>();
+parsePlan(yaml.parse(planYaml), [], plan);
+
+if (plan.size < 1) {
+	throw new Error('Expected at least 1 case in plan.yaml, but found zero.');
+}
 
 const nodeExe = process.execPath;
 
@@ -40,6 +104,73 @@ const downstreamCmakeDir = Path.build('downstream/cmake');
 
 function exe(path: string): string {
 	return platform() === 'win32' ? path + '.exe' : path;
+}
+
+interface TestResult {
+	id: string;
+	passed: boolean;
+}
+
+function spawnAsync(exe: string): Promise<string> {
+  return new Promise<string>((resolve, reject) => {
+		const args: string[] = [];
+    const child = spawn(exe, args, { stdio: ["ignore", "pipe", "pipe"] });
+
+    const outChunks: Buffer[] = [];
+    const errChunks: Buffer[] = [];
+
+    child.stdout.on("data", chunk => outChunks.push(Buffer.from(chunk)));
+    child.stderr.on("data", chunk => errChunks.push(Buffer.from(chunk)));
+
+    child.on("error", reject);
+
+    child.on("close", (code, signal) => {
+      const stdout = Buffer.concat(outChunks).toString("utf8");
+      const stderr = Buffer.concat(errChunks).toString("utf8");
+
+      if (code === 0 && signal == null) {
+        resolve(stdout);
+      } else {
+        const err = new Error(
+          `Command failed: ${exe} ${args.join(" ")} (code ${code}${
+            signal ? `, signal ${signal}` : ""
+          })\n${stderr}`
+        );
+        reject(err);
+      }
+    });
+  });
+}
+
+async function runTestExe(exe: string): Promise<TestResult[]> {
+	const results: TestResult[] = [];
+
+	const stdout = await spawnAsync(exe);
+	const lines = stdout.split(/\r?\n/);
+	for (let line of lines) {
+		line = line.trim();
+		if (!line) {
+			continue;
+		}
+
+		const eqIndex = line.indexOf('=');
+		if (eqIndex === -1) {
+			throw new Error(`Invalid output from exe '${exe}'. Line had no '=': ${line}`);
+		}
+
+		const id = line.substr(0, eqIndex).trim();
+
+		const result = line.substr(eqIndex + 1).trim();
+		if (result === 'pass') {
+			results.push({ id, passed: true });
+		} else if (result === 'fail') {
+			results.push({ id, passed: false });
+		} else {
+			throw new Error(`Invalid output from exe '${exe}'. Line neither indicated 'pass' nor 'fail': ${line}`);
+		}
+	}
+
+	return results;
 }
 
 interface IRunEsmakefileOpts {
@@ -68,6 +199,8 @@ function runEsmake(args: RecipeArgs, opts: IRunEsmakefileOpts): Promise<boolean>
 }
 
 cli((make) => {
+	let allResults: TestResult[] = [];
+
 	const aTarball = pkgPackDir.join('a/a-0.1.0.tgz');
 	const aCmake = pkgUnpackDir.join('a/CMakeLists.txt');
 
@@ -75,6 +208,10 @@ cli((make) => {
 
 	make.add('install-upstream', (args) => {
 		return installUpstream(upstreamVendorBuildDir, upstreamVendorDir);
+	});
+
+	make.add('reset', () => {
+		allResults = [];
 	});
 
 	make.add('distribution-spec', ['install-upstream'], (args) => {
@@ -118,8 +255,9 @@ cli((make) => {
 		await cmake.install(pkgBuild, { prefix: args.abs(pkgVendorDir) });
 	});
 
-	make.add('run-e1', ['package-install'], async (args) => {
-		return args.spawn(args.abs(Path.build(exe('vendor/bin/e1'))), []);
+	make.add('run-e1', ['package-install', 'reset'], async (args) => {
+		const results = await runTestExe(args.abs(Path.build(exe('vendor/bin/e1'))));
+		allResults.push(...results);
 	});
 
 	const d1Esmake = downstreamEsmakeDir.join(exe('d1/d1/d1'));
@@ -139,5 +277,34 @@ cli((make) => {
 		return args.spawn(args.abs(d1Esmake), []);
 	});
 
-	make.add('pkg', [d1Esmake, 'run-e1'], () => {});
+	make.add('pkg', [d1Esmake, 'run-e1'], (args) => {
+		let allPassed = true;
+		const missedCases = new Set<string>();
+		for (const [id, _] of plan) {
+			missedCases.add(id);
+		}
+
+		for (const r of allResults) {
+			const { id, passed } = r;
+			missedCases.delete(id);
+
+			if (!passed) {
+				allPassed = false;
+			}
+
+			if (!plan.has(id)) {
+				allPassed = false;
+				args.logStream.write(`Unplanned test case in results: ${id}\n`);
+			}
+
+			args.logStream.write(`${id} = ${passed ? 'pass' : 'fail'}\n`);
+		}
+
+		if (missedCases.size > 0) {
+			allPassed = false;
+			args.logStream.write(`Planned test cases had no results: ${Array.from(missedCases).join(', ')}\n`);
+		}
+
+		return allPassed;
+	});
 });
