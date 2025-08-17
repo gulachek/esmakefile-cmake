@@ -1,17 +1,21 @@
 group: e2e
 plan:
-  - group: include
+  - group: addExecutable
     plan:
-      - case: default-src
-        prose: By default, the `@src/include` dir is included at compile time.
-        systems: [esm, cmake] # default
-        types: [exe, lib, test] # default
-      - case: default-build
-        prose: By default, the `@build/include` dir is included at compile time.
-      - case: specify
-        prose: When `includeDirs` are specified, they are included at compile time.
-      - case: specify-keeps-src
-        prose: When `includeDirs` are specified, `@src/include` is still included.
-      - case: specify-keeps-build
-        prose: When `includeDirs` are specified, `@build/include` is still included.
+      - case: install-to-bin
+        prose: When installed, an executable created with `addExecutable` is available in `<prefix>/bin`.
+          # - group: include
+          #   plan:
+          #     - case: default-src
+          #       prose: By default, the `@src/include` dir is included at compile time.
+          #       systems: [esm, cmake] # default
+          #       types: [exe, lib, test] # default
+          #     - case: default-build
+          #       prose: By default, the `@build/include` dir is included at compile time.
+          #     - case: specify
+          #       prose: When `includeDirs` are specified, they are included at compile time.
+          #     - case: specify-keeps-src
+          #       prose: When `includeDirs` are specified, `@src/include` is still included.
+          #     - case: specify-keeps-build
+          #       prose: When `includeDirs` are specified, `@build/include` is still included.
 
