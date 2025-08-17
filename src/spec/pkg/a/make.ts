@@ -18,7 +18,8 @@
  */
 
 import { Distribution } from '../../../index.js';
-import { cli } from 'esmakefile';
+import { cli, Path } from 'esmakefile';
+import { writeFile } from 'node:fs/promises';
 
 cli((make) => {
 	const d = new Distribution(make, {
@@ -26,9 +27,15 @@ cli((make) => {
 		version: '0.1.0'
 	});
 
+	const genC = Path.build('gen.c');
+
+	make.add(genC, (args) => {
+		return writeFile(args.abs(genC), 'int gen12() { return 12; }');
+	});
+
 	d.addExecutable({
 		name: 'e1',
-		src: ['src/e1.c']
+		src: ['src/e1.c', genC]
 	});
 
 	d.addLibrary({

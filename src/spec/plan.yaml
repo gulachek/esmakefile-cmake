@@ -4,6 +4,8 @@ plan:
     plan:
       - case: install-to-bin
         prose: When installed, an executable created with `addExecutable` is available in `<prefix>/bin`.
+      - case: packages-generated-src
+        prose: An executable created with `addExecutable` that has a generated `src` file packages the generated file in the distribution.
           # - group: include
           #   plan:
           #     - case: default-src

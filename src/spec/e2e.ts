@@ -161,12 +161,12 @@ async function runTestExe(exe: string): Promise<TestResult[]> {
 		const id = line.substr(0, eqIndex).trim();
 
 		const result = line.substr(eqIndex + 1).trim();
-		if (result === 'pass') {
+		if (result === '1') {
 			results.push({ id, passed: true });
-		} else if (result === 'fail') {
+		} else if (result === '0') {
 			results.push({ id, passed: false });
 		} else {
-			throw new Error(`Invalid output from exe '${exe}'. Line neither indicated 'pass' nor 'fail': ${line}`);
+			throw new Error(`Invalid output from exe '${exe}'. Line neither indicated '0' nor '1': ${line}`);
 		}
 	}
 

@@ -1314,17 +1314,10 @@ describe('Distribution', function () {
 				linkTo: [notFound],
 			});
 
-			const gen = d.addExecutable({
-				name: 'gen',
-				src: [genC],
-				linkTo: [zero],
-			});
-
 			// TODO - install multiple in same call
 			d.install(printv);
 			d.install(printvxx);
 			d.install(add);
-			d.install(gen);
 			d.install(testUpstream);
 
 			await install(d);
@@ -1354,10 +1347,6 @@ describe('Distribution', function () {
 		after(async () => {
 			chdir(oldDir);
 			await rm(testDir, { recursive: true });
-		});
-
-		it('can install a target with generated source', async () => {
-			await expectOutput('vendor/bin/gen', 'generated!');
 		});
 
 		it('passes upstream checks', async () => {
