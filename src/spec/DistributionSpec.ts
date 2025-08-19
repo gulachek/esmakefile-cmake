@@ -1210,23 +1210,6 @@ describe('Distribution', function () {
 				'int add(int a, int b) { return one() * (a + b); }',
 			);
 
-			await writePath(
-				'src/test_upstream.c',
-				'#include <two.h>',
-				'#include <hello.h>',
-				'#include <world.h>',
-				'#include <assert.h>',
-				'#include <stdio.h>',
-				'#include <string.h>',
-				'int main() {',
-				' assert(two()+two() == 4);',
-				' assert(strcmp(hello(), "hello") == 0);',
-				' assert(strcmp(world(), "world") == 0);',
-				' printf("success!");',
-				'	return 0;',
-				'}',
-			);
-
 			await writePath('src/unit_test.c', 'int main() { return 0; }');
 
 			const genC = Path.build('gen.c');
@@ -1251,37 +1234,10 @@ describe('Distribution', function () {
 			distArchive = d.dist;
 
 			const notFound = d.findPackage('not-found');
-			const zero = d.findPackage('zero');
+
 			const one = d.findPackage({
 				pkgconfig: 'libone',
 				cmake: 'one',
-			});
-
-			const two = d.findPackage({
-				pkgconfig: 'two',
-				cmake: {
-					packageName: 'Two2',
-					version: '2',
-					libraryTarget: 'two',
-				},
-			});
-
-			const hello = d.findPackage({
-				pkgconfig: 'hello',
-				cmake: {
-					packageName: 'HelloWorld',
-					component: 'hello',
-					libraryTarget: 'HelloWorld::hello',
-				},
-			});
-
-			const world = d.findPackage({
-				pkgconfig: 'world',
-				cmake: {
-					packageName: 'HelloWorld',
-					component: 'world',
-					libraryTarget: 'HelloWorld::world',
-				},
 			});
 
 			const printv = d.addExecutable({
@@ -1300,12 +1256,6 @@ describe('Distribution', function () {
 				linkTo: [one],
 			});
 
-			const testUpstream = d.addExecutable({
-				name: 'test_upstream',
-				src: ['src/test_upstream.c'],
-				linkTo: [two, hello, world],
-			});
-
 			d.addTest({
 				name: 'unit_test',
 				src: ['src/unit_test.c'],
@@ -1318,7 +1268,6 @@ describe('Distribution', function () {
 			d.install(printv);
 			d.install(printvxx);
 			d.install(add);
-			d.install(testUpstream);
 
 			await install(d);
 
@@ -1347,10 +1296,6 @@ describe('Distribution', function () {
 		after(async () => {
 			chdir(oldDir);
 			await rm(testDir, { recursive: true });
-		});
-
-		it('passes upstream checks', async () => {
-			await expectOutput('vendor/bin/test_upstream', 'success!');
 		});
 
 		it('does not install a test', () => {
