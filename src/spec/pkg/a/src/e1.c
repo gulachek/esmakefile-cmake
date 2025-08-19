@@ -19,7 +19,7 @@ int main() {
 	/*
 	 * zero was referenced with findPackage('zero')
 	 */
-	printf("e2e.addExecutable.findPackage-pc-cmake-same-install = %d\n", ZERO == 0);
+	printf("e2e.addExecutable.findPackage-implicit-cmake-name-install = %d\n", ZERO == 0);
 
 	/*
 	 * one was referenced with findPackage({ cmake: 'one', ... })
