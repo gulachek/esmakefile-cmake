@@ -1,6 +1,9 @@
-#include <stdio.h>
 #include <one.h>
 #include <two.h>
+#include <hello.h>
+
+#include <stdio.h>
+#include <string.h>
 
 extern int gen12();
 
@@ -31,5 +34,10 @@ int main() {
 	 * two was referenced with findPackage with { cmake: { name: ..., libraryTarget: ... } }
 	 */
 	printf("e2e.addExecutable.findPackage-explicit-cmake-target-install = %d\n", two() == 2);
+
+	/*
+	 * hello was referenced with findPackage with { cmake: { ..., component: ... } }
+	 */
+	printf("e2e.addExecutable.findPackage-explicit-cmake-component-install = %d\n", strcmp(hello(), "hello") == 0);
 	return 0;
 }

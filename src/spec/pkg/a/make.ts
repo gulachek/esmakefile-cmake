@@ -42,7 +42,6 @@ cli((make) => {
 		},
 	});
 
-	/*
 	const hello = d.findPackage({
 		pkgconfig: 'hello',
 		cmake: {
@@ -51,16 +50,6 @@ cli((make) => {
 			libraryTarget: 'HelloWorld::hello',
 		},
 	});
-
-	const world = d.findPackage({
-		pkgconfig: 'world',
-		cmake: {
-			packageName: 'HelloWorld',
-			component: 'world',
-			libraryTarget: 'HelloWorld::world',
-		},
-	});
- */
 
 	const genC = Path.build('gen.c');
 
@@ -71,7 +60,7 @@ cli((make) => {
 	d.addExecutable({
 		name: 'e1',
 		src: ['src/e1.c', genC],
-		linkTo: [zero, one, two]
+		linkTo: [zero, one, two, hello]
 	});
 
 	d.addLibrary({

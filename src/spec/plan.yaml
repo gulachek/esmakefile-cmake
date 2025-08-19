@@ -17,3 +17,9 @@ plan:
           An executable with a `linkTo` a `findPackage({ cmake: { name: <name>,
           libraryTarget: <target>, ... }, ... })` finds a CMake package with that `name` and
           links to a library named `target`.
+      - case: findPackage-explicit-cmake-component-install
+        prose: >-
+          An executable with a `linkTo` a `findPackage({ cmake: { name: <name>,
+          libraryTarget: <target>, component: <component>, ... }, ... })` finds a CMake package
+          with that `name` with a component named `component` and links to a library named
+          `target`.
