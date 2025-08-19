@@ -54,7 +54,7 @@ export function parseConfig(config: unknown, basePath?: string): config is IConf
 					return false;
 				}
 
-				paths[i] = resolve(paths[i], basePath);
+				paths[i] = basePath ? resolve(paths[i], basePath) : resolve(paths[i]);
 			}
 		} else if (p === 'buildSharedLibs') {
 			if (typeof config[p] !== 'boolean') {
