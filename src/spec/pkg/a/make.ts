@@ -29,12 +29,12 @@ cli((make) => {
 
 	const zero = d.findPackage('zero');
 
-	/*
 	const one = d.findPackage({
 		pkgconfig: 'libone',
 		cmake: 'one',
 	});
 
+	/*
 	const two = d.findPackage({
 		pkgconfig: 'two',
 		cmake: {
@@ -72,7 +72,7 @@ cli((make) => {
 	d.addExecutable({
 		name: 'e1',
 		src: ['src/e1.c', genC],
-		linkTo: [zero]
+		linkTo: [zero, one]
 	});
 
 	d.addLibrary({

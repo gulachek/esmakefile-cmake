@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <one.h>
 
 extern int gen12();
 
@@ -20,5 +21,9 @@ int main() {
 	 */
 	printf("e2e.addExecutable.findPackage-pc-cmake-same-install = %d\n", ZERO == 0);
 
+	/*
+	 * one was referenced with findPackage({ cmake: 'one', ... })
+	 */
+	printf("e2e.addExecutable.findPackage-explicit-cmake-name-install = %d\n", one() == 1);
 	return 0;
 }
