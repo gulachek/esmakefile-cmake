@@ -27,6 +27,42 @@ cli((make) => {
 		version: '0.1.0'
 	});
 
+	const zero = d.findPackage('zero');
+
+	/*
+	const one = d.findPackage({
+		pkgconfig: 'libone',
+		cmake: 'one',
+	});
+
+	const two = d.findPackage({
+		pkgconfig: 'two',
+		cmake: {
+			packageName: 'Two2',
+			version: '2',
+			libraryTarget: 'two',
+		},
+	});
+
+	const hello = d.findPackage({
+		pkgconfig: 'hello',
+		cmake: {
+			packageName: 'HelloWorld',
+			component: 'hello',
+			libraryTarget: 'HelloWorld::hello',
+		},
+	});
+
+	const world = d.findPackage({
+		pkgconfig: 'world',
+		cmake: {
+			packageName: 'HelloWorld',
+			component: 'world',
+			libraryTarget: 'HelloWorld::world',
+		},
+	});
+ */
+
 	const genC = Path.build('gen.c');
 
 	make.add(genC, (args) => {
@@ -35,7 +71,8 @@ cli((make) => {
 
 	d.addExecutable({
 		name: 'e1',
-		src: ['src/e1.c', genC]
+		src: ['src/e1.c', genC],
+		linkTo: [zero]
 	});
 
 	d.addLibrary({

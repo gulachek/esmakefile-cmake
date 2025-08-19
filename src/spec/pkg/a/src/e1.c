@@ -14,5 +14,11 @@ int main() {
 	 * validates that the generated file was packaged correctly.
 	 */
 	printf("e2e.addExecutable.packages-generated-src = %d\n", gen12() == 12);
+
+	/*
+	 * zero was referenced with findPackage('zero')
+	 */
+	printf("e2e.addExecutable.findPackage-pc-cmake-same-install = %d\n", ZERO == 0);
+
 	return 0;
 }

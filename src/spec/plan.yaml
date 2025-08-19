@@ -5,7 +5,9 @@ plan:
       - case: install-to-bin
         prose: When installed, an executable created with `addExecutable` is available in `<prefix>/bin`.
       - case: packages-generated-src
-        prose: An executable created with `addExecutable` that has a generated `src` file packages the generated file in the distribution.
+        prose: An executable that has a generated `src` file packages the generated file in the distribution.
+      - case: findPackage-pc-cmake-same-install
+        prose: An executable with a `linkTo` a `findPackage(<name>)` finds a CMake package with that `name` and links to a library with `name`.
           # - group: include
           #   plan:
           #     - case: default-src

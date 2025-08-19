@@ -185,7 +185,6 @@ function runEsmake(args: RecipeArgs, opts: IRunEsmakefileOpts): Promise<boolean>
 	const outDir = Path.build(opts.outDir);
 	const srcDir = Path.src(opts.srcDir);
 
-
 	const proc = spawn(nodeExe, [args.abs(makeJs), '--outdir', args.abs(outDir), '--srcdir', args.abs(srcDir), opts.target], { stdio: 'pipe', cwd: '.test' });
 
 	proc.stdout.pipe(args.logStream, { end: false });
@@ -200,6 +199,8 @@ function runEsmake(args: RecipeArgs, opts: IRunEsmakefileOpts): Promise<boolean>
 
 cli((make) => {
 	let allResults: TestResult[] = [];
+
+	const esmakefileCmakeConfig = Path.build('esmakefile-cmake.config.json');
 
 	const aTarball = pkgPackDir.join('a/a-0.1.0.tgz');
 	const aCmake = pkgUnpackDir.join('a/CMakeLists.txt');
@@ -222,7 +223,13 @@ cli((make) => {
 	make.add('dev', ['distribution-spec'], () => {});
 
 	// TODO: make this independent from distribution-spec by not deleting .test dir over and over again in that spec
-	make.add(aTarball, ['distribution-spec'], (args) => {
+	make.add(esmakefileCmakeConfig, ['distribution-spec'], (args) => {
+		return writeFile(args.abs(esmakefileCmakeConfig), JSON.stringify({
+			addPkgConfigSearchPaths: [join(upstreamVendorDir, 'lib', 'pkgconfig')]
+		}));
+	});
+
+	make.add(aTarball, [esmakefileCmakeConfig], (args) => {
 		return runEsmake(args, {
 			makeJs: 'dist/spec/pkg/a/make.js',
 			srcDir: 'src/spec/pkg/a',
@@ -248,7 +255,7 @@ cli((make) => {
 		await cmake.configure({
 			src: args.abs(cmakeTxt.dir()),
 			build: pkgBuild,
-			prefixPath: [args.abs(pkgVendorDir)]
+			prefixPath: [args.abs(pkgVendorDir), upstreamVendorDir]
 		});
 
 		await cmake.build(pkgBuild, { config: 'Release' });
