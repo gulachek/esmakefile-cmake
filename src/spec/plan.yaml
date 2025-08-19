@@ -11,5 +11,9 @@ plan:
       - case: findPackage-explicit-cmake-name-install
         prose: >-
           An executable with a `linkTo` a `findPackage({ cmake: <name>, ... })` finds a
-          CMake package with that `name` and links to a library with `name`.
-
+          CMake package with that `name` and links to a library named `name`.
+      - case: findPackage-explicit-cmake-target-install
+        prose: >-
+          An executable with a `linkTo` a `findPackage({ cmake: { name: <name>,
+          libraryTarget: <target>, ... }, ... })` finds a CMake package with that `name` and
+          links to a library named `target`.

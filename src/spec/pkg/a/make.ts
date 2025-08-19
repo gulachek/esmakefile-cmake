@@ -34,16 +34,15 @@ cli((make) => {
 		cmake: 'one',
 	});
 
-	/*
 	const two = d.findPackage({
 		pkgconfig: 'two',
 		cmake: {
 			packageName: 'Two2',
-			version: '2',
 			libraryTarget: 'two',
 		},
 	});
 
+	/*
 	const hello = d.findPackage({
 		pkgconfig: 'hello',
 		cmake: {
@@ -72,7 +71,7 @@ cli((make) => {
 	d.addExecutable({
 		name: 'e1',
 		src: ['src/e1.c', genC],
-		linkTo: [zero, one]
+		linkTo: [zero, one, two]
 	});
 
 	d.addLibrary({
