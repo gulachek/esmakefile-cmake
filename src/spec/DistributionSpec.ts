@@ -1306,7 +1306,6 @@ describe('Distribution', function () {
 
 			const p = 'test-1.2.3';
 			const output = result.output.join('').split(/\r?\n/);
-			expect(output).to.contain(`${p}/LICENSE.txt`); // license
 			expect(output).to.contain(`${p}/src/printv.c`); // src
 			expect(output).not.to.contain(`${p}/src/unit_test.c`); // test
 		});

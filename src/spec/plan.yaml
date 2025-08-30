@@ -1,5 +1,9 @@
 group: e2e
 plan:
+  - group: Distribution
+    plan:
+      - case: package-copies-license
+        prose: Package creation copies `LICENSE.txt` from source into the package.
   - group: addExecutable
     plan:
       - case: install-to-bin

@@ -21,7 +21,7 @@ import { cli, Path, PathLike, BuildPathLike, RecipeArgs } from 'esmakefile';
 import { cmake } from './cmake.js';
 import { installUpstream } from './upstream.js';
 import { resolve, join } from 'node:path';
-import { writeFile } from 'node:fs/promises';
+import { writeFile, readFile } from 'node:fs/promises';
 import { readFileSync } from 'node:fs';
 import { platform } from 'node:os';
 import { spawn } from 'node:child_process';
@@ -247,6 +247,9 @@ cli((make) => {
 		const list = await spawnAsync('tar', ['tzf', args.abs(aTarball)]);
 		const t1Index = list.indexOf('t1.c');
 		allResults.push({ id: 'e2e.addTest.omitted-from-package', passed: t1Index === -1 });
+
+		const licenseTxt = await readFile(args.abs(aCmake.dir().join('LICENSE.txt')), 'utf8');
+		allResults.push({ id: 'e2e.Distribution.package-copies-license', passed: licenseTxt.indexOf("Fake license for 'a'") >= 0 });
 		return true;
 	});
 
