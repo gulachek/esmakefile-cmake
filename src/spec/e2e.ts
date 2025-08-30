@@ -111,9 +111,9 @@ interface TestResult {
 	passed: boolean;
 }
 
-function spawnAsync(exe: string): Promise<string> {
+function spawnAsync(exe: string, args?: string[]): Promise<string> {
   return new Promise<string>((resolve, reject) => {
-		const args: string[] = [];
+		args = args || [];
     const child = spawn(exe, args, { stdio: ["ignore", "pipe", "pipe"] });
 
     const outChunks: Buffer[] = [];
@@ -238,8 +238,16 @@ cli((make) => {
 		});
 	});
 
-	make.add(aCmake, [aTarball], async (args) => {
-		return args.spawn('tar', ['xzf', args.abs(aTarball), '-C', args.abs(aCmake.dir()), '--strip-components=1']);
+	make.add(aCmake, [aTarball, 'reset'], async (args) => {
+		const result = await args.spawn('tar', ['xzf', args.abs(aTarball), '-C', args.abs(aCmake.dir()), '--strip-components=1']);
+		if (!result) {
+			return false;
+		}
+
+		const list = await spawnAsync('tar', ['tzf', args.abs(aTarball)]);
+		const t1Index = list.indexOf('t1.c');
+		allResults.push({ id: 'e2e.addTest.omitted-from-package', passed: t1Index === -1 });
+		return true;
 	});
 
 	make.add('package-install', [aCmake], async (args) => {

@@ -23,3 +23,7 @@ plan:
           libraryTarget: <target>, component: <component>, ... }, ... })` finds a CMake package
           with that `name` with a component named `component` and links to a library named
           `target`.
+  - group: addTest
+    plan:
+      - case: omitted-from-package
+        prose: After creating a package, source provided to `addTest` is not copied to the package.

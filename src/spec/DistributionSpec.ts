@@ -1298,17 +1298,6 @@ describe('Distribution', function () {
 			await rm(testDir, { recursive: true });
 		});
 
-		it('does not install a test', () => {
-			// first check printv to make sure we're in the right directory (avoid success by accident)
-			if (platform() === 'win32') {
-				expect(existsSync('vendor\\bin\\printv.exe')).to.be.true;
-				expect(existsSync('vendor\\bin\\unit_test.exe')).to.be.false;
-			} else {
-				expect(existsSync('vendor/bin/printv')).to.be.true;
-				expect(existsSync('vendor/bin/unit_test')).to.be.false;
-			}
-		});
-
 		it('copies expected files to distribution', () => {
 			// just to make sure we're in right cwd
 			const result = spawnSync('tar', ['tfz', make.abs(distArchive)], {

@@ -63,6 +63,11 @@ cli((make) => {
 		linkTo: [zero, one, two, hello]
 	});
 
+	d.addTest({
+		name: 't1',
+		src: ['test/t1.c']
+	});
+
 	d.addLibrary({
 		name: 'a',
 		src: ['src/a.c']
