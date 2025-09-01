@@ -162,7 +162,10 @@ function spawnAsync(exe: string, args?: string[]): Promise<string> {
 	});
 }
 
-async function runTestExe(exe: string): Promise<TestResult[]> {
+async function runTestExe(
+	exe: string,
+	vars?: Record<string, string>,
+): Promise<TestResult[]> {
 	const results: TestResult[] = [];
 
 	const stdout = await spawnAsync(exe);
@@ -180,7 +183,10 @@ async function runTestExe(exe: string): Promise<TestResult[]> {
 			);
 		}
 
-		const id = line.substring(0, eqIndex).trim();
+		let id = line.substring(0, eqIndex).trim();
+		for (const k in vars) {
+			id = id.replaceAll(`{${k}}`, vars[k]);
+		}
 
 		const result = line.substring(eqIndex + 1).trim();
 		if (result === '1') {
@@ -366,7 +372,7 @@ cli((make) => {
 
 		if (!success) return false;
 
-		const results = await runTestExe(args.abs(d1Esmake));
+		const results = await runTestExe(args.abs(d1Esmake), { pkg: 'pkgconfig' });
 		allResults.push(...results);
 	});
 

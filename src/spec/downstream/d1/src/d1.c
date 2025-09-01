@@ -2,6 +2,6 @@
 #include <stdio.h>
 
 int main() {
-  printf("e2e.addLibrary.installs-pkgconfig = %d\n", a() == 'a');
+  printf("e2e.addLibrary.installs-{pkg} = %d\n", a() == 'a');
   return 0;
 }
