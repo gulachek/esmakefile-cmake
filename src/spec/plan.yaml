@@ -35,6 +35,10 @@ plan:
           libraryTarget: <target>, component: <component>, ... }, ... })` finds a CMake package
           with that `name` with a component named `component` and links to a library named
           `target`.
+  - group: addLibrary
+    plan:
+      - case: installs-pkgconfig
+        prose: A library installs a `.pc` file with the same name as the library that links to the library.
   - group: addTest
     plan:
       - case: omitted-from-package

@@ -1293,33 +1293,6 @@ describe('Distribution', function () {
 			await rm(testDir, { recursive: true });
 		});
 
-		it('installs a library w/ pkgconfig', async () => {
-			await writePath(
-				'src/print.c',
-				'#include <stdio.h>',
-				'#include <times2.h>',
-				'int main() {',
-				'printf("2*3=%d", times2(3));',
-				'return 0;',
-				'}',
-			);
-
-			const d = new Distribution(make, {
-				name: 'math',
-				version: '1.1.1',
-			});
-
-			const add = d.findPackage('times2');
-
-			const print = d.addExecutable({
-				name: 'print',
-				src: ['src/print.c'],
-				linkTo: [add],
-			});
-
-			await expectOutput(print.binary, '2*3=6');
-		});
-
 		it('installs a CMake package for library', async () => {
 			await writePath(
 				'src/print.c',

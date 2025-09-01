@@ -356,7 +356,7 @@ cli((make) => {
 
 	const d1Esmake = downstreamEsmakeDir.join(exe('d1/d1/d1'));
 
-	make.add(d1Esmake, ['install-upstream', 'package-install'], async (args) => {
+	make.add(d1Esmake, ['package-install', 'reset'], async (args) => {
 		const success = await runEsmake(args, {
 			makeJs: downstreamDist.join('d1/make.js'),
 			srcDir: downstreamSrc.join('d1'),
@@ -366,7 +366,8 @@ cli((make) => {
 
 		if (!success) return false;
 
-		return args.spawn(args.abs(d1Esmake), []);
+		const results = await runTestExe(args.abs(d1Esmake));
+		allResults.push(...results);
 	});
 
 	make.add('pkg', [d1Esmake, 'run-e1'], (args) => {

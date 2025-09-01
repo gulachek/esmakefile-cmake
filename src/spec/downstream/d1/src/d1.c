@@ -1,7 +1,7 @@
-#include <stdio.h>
 #include <a/a.h>
+#include <stdio.h>
 
 int main() {
-	printf("The value of a() is: %c", a());
-	return 0;
+  printf("e2e.addLibrary.installs-pkgconfig = %d\n", a() == 'a');
+  return 0;
 }
