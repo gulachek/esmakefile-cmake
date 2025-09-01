@@ -21,7 +21,7 @@ import { cli, Path, PathLike, BuildPathLike, RecipeArgs } from 'esmakefile';
 import { cmake } from './cmake.js';
 import { installUpstream } from './upstream.js';
 import { resolve, join } from 'node:path';
-import { writeFile, readFile } from 'node:fs/promises';
+import { writeFile, readFile, rm } from 'node:fs/promises';
 import { readFileSync } from 'node:fs';
 import { platform } from 'node:os';
 import { spawn } from 'node:child_process';
@@ -255,19 +255,19 @@ cli((make) => {
 		return installUpstream(upstreamVendorBuildDir, upstreamVendorDir);
 	});
 
-	make.add('reset', () => {
+	make.add('reset', async () => {
 		allResults = [];
+		await rm(make.buildRoot, { recursive: true });
 	});
 
-	make.add('distribution-spec', ['install-upstream'], (args) => {
+	make.add('distribution-spec', ['install-upstream', 'reset'], (args) => {
 		const mochaJs = 'node_modules/mocha/bin/mocha.js';
 		return args.spawn(nodeExe, [mochaJs, 'dist/spec/DistributionSpec.js']);
 	});
 
 	make.add('dev', ['distribution-spec'], () => {});
 
-	// TODO: make this independent from distribution-spec by not deleting .test dir over and over again in that spec
-	make.add(esmakefileCmakeConfig, ['distribution-spec'], (args) => {
+	make.add(esmakefileCmakeConfig, ['reset'], (args) => {
 		return writeFile(
 			args.abs(esmakefileCmakeConfig),
 			JSON.stringify({
@@ -285,7 +285,7 @@ cli((make) => {
 		});
 	});
 
-	make.add(aCmake, [aTarball, 'reset'], async (args) => {
+	make.add(aCmake, [aTarball], async (args) => {
 		const aPkg = aCmake.dir();
 
 		const result = await args.spawn('tar', [
@@ -353,7 +353,7 @@ cli((make) => {
 		await cmake.install(pkgBuild, { prefix: args.abs(pkgVendorDir) });
 	});
 
-	make.add('run-e1', ['package-install', 'reset'], async (args) => {
+	make.add('run-e1', ['package-install'], async (args) => {
 		const results = await runTestExe(
 			args.abs(Path.build(exe('vendor/bin/e1'))),
 		);
@@ -363,7 +363,7 @@ cli((make) => {
 	const d1Esmake = downstreamEsmakeDir.join(exe('d1/d1/d1'));
 	const d1Cmake = downstreamCmakeDir.join(exe('d1/d1'));
 
-	make.add(d1Esmake, ['package-install', 'reset'], async (args) => {
+	make.add(d1Esmake, ['package-install'], async (args) => {
 		const success = await runEsmake(args, {
 			makeJs: downstreamDist.join('d1/make.js'),
 			srcDir: downstreamSrc.join('d1'),
@@ -377,7 +377,7 @@ cli((make) => {
 		allResults.push(...results);
 	});
 
-	make.add(d1Cmake, ['package-install', 'reset'], async (args) => {
+	make.add(d1Cmake, ['package-install'], async (args) => {
 		const buildDir = args.abs(d1Cmake.dir());
 
 		await cmake.configure({
