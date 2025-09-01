@@ -70,7 +70,7 @@ async function updateTarget(
 }
 
 describe('Distribution', function () {
-	this.timeout(60000); // 2 sec too short for these specs. MS cmake config takes ~20s
+	this.timeout(30000); // give some time for compiler
 	let make: Makefile;
 
 	const allNames = new Set<string>();
