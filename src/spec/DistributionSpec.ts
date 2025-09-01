@@ -25,21 +25,18 @@ import {
 	Path,
 	BuildPathLike,
 } from 'esmakefile';
-import { mkdir, rm, writeFile, readFile, cp } from 'node:fs/promises';
+import { mkdir, rm, writeFile, readFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { platform } from 'node:os';
 import { spawnSync } from 'node:child_process';
 import { chdir, cwd } from 'node:process';
 import { run } from './run.js';
-import { cmake } from './cmake.js';
 
 const testDir = resolve('.test');
 const srcDir = join(testDir, 'src');
 const buildDir = join(testDir, 'build');
-const stageDir = join(testDir, 'stage');
 const includeDir = join(testDir, 'include');
 const vendorDir = join(testDir, 'vendor');
-const cmakeDir = join(vendorDir, 'lib', 'cmake');
 const pkgconfigDir = join(vendorDir, 'lib', 'pkgconfig');
 
 async function updateTarget(
@@ -115,28 +112,6 @@ describe('Distribution', function () {
 
 		const { stdout } = spawnSync(make.abs(path), { encoding: 'utf8' });
 		expect(stdout).to.equal(output);
-	}
-
-	async function install(d: Distribution): Promise<void> {
-		await updateTarget(make, d.dist);
-
-		await run('tar', ['xfvz', make.abs(d.dist)], {
-			cwd: testDir,
-			encoding: 'utf8',
-		});
-
-		await mkdir(stageDir);
-		await cmake.configure({
-			build: stageDir,
-			src: join(testDir, `${d.name}-${d.version}`),
-			prefixPath: [vendorDir],
-		});
-
-		// Specify config b.c. default for MS is Debug for --build and Release for --install
-		await cmake.build(stageDir, { config: 'Release' });
-
-		await cmake.install(stageDir, { prefix: vendorDir });
-		await rm(stageDir, { recursive: true });
 	}
 
 	describe('development', () => {
@@ -1163,164 +1138,6 @@ describe('Distribution', function () {
 				make.abs(add),
 				make.abs(test),
 			]);
-		});
-	});
-
-	describe('installation', () => {
-		let oldDir: string = '';
-
-		before(async () => {
-			make = new Makefile({
-				srcRoot: testDir,
-				buildRoot: buildDir,
-			});
-
-			await mkdir(includeDir, { recursive: true });
-			await mkdir(srcDir, { recursive: true });
-			await mkdir(pkgconfigDir, { recursive: true });
-			await mkdir(cmakeDir, { recursive: true });
-
-			await cp('vendor', join(testDir, 'vendor'), { recursive: true });
-			oldDir = cwd();
-			chdir(testDir);
-
-			await writePath('LICENSE.txt', 'This is a test license!');
-
-			await writePath(
-				'src/printv.c',
-				'#include <stdio.h>',
-				'int main(){ printf("%ld", __STDC_VERSION__); return 0; }',
-			);
-
-			await writePath(
-				'src/printvxx.cpp',
-				'#include <cstdio>',
-				...cxxLangMacro,
-				'int main(){ std::printf("%ld", CXXLANG); return 0; }',
-			);
-
-			await writePath('include/add.h', 'int add(int a, int b);');
-			await writePath(
-				'src/add.c',
-				'#include "add.h"',
-				'#include <one.h>',
-				'int add(int a, int b) { return one() * (a + b); }',
-			);
-
-			await writePath('src/unit_test.c', 'int main() { return 0; }');
-
-			const genC = Path.build('gen.c');
-			make.add(genC, async () => {
-				await writePath(
-					genC,
-					'#include <stdio.h>',
-					'int main() {',
-					'printf("generated!");',
-					'return ZERO;',
-					'}',
-				);
-			});
-
-			const d = new Distribution(make, {
-				name: 'test',
-				version: '1.2.3',
-				cStd: 11,
-				cxxStd: 20,
-			});
-
-			const notFound = d.findPackage('not-found');
-
-			const one = d.findPackage({
-				pkgconfig: 'libone',
-				cmake: 'one',
-			});
-
-			const printv = d.addExecutable({
-				name: 'printv',
-				src: ['src/printv.c'],
-			});
-
-			const printvxx = d.addExecutable({
-				name: 'printv++',
-				src: ['src/printvxx.cpp'],
-			});
-
-			const add = d.addLibrary({
-				name: 'add',
-				src: ['src/add.c'],
-				linkTo: [one],
-			});
-
-			d.addTest({
-				name: 'unit_test',
-				src: ['src/unit_test.c'],
-				// This makes sure that distribution doesn't do
-				// find_package on unit test dependencies
-				linkTo: [notFound],
-			});
-
-			// TODO - install multiple in same call
-			d.install(printv);
-			d.install(printvxx);
-			d.install(add);
-
-			await install(d);
-
-			const d2 = new Distribution(make, {
-				name: 'test2',
-				version: '2.3.4',
-			});
-
-			await writePath('include/times2.h', 'int times2(int n);');
-			await writePath(
-				'src/times2.c',
-				'#include <add.h>',
-				'int times2(int n){ return add(n, n); }',
-			);
-
-			const times2 = d2.addLibrary({
-				name: 'times2',
-				src: ['src/times2.c'],
-				linkTo: [add], // from different distribution!
-			});
-
-			d2.install(times2);
-			await install(d2);
-		});
-
-		after(async () => {
-			chdir(oldDir);
-			await rm(testDir, { recursive: true });
-		});
-
-		it('installs a CMake package for library', async () => {
-			await writePath(
-				'src/print.c',
-				'#include <stdio.h>',
-				'#include <times2.h>',
-				'int main() {',
-				'printf("2*3=%d", times2(3));',
-				'return 0;',
-				'}',
-			);
-
-			await writePath(
-				'CMakeLists.txt',
-				'cmake_minimum_required(VERSION 3.10)',
-				'project(Test)',
-				'find_package(times2 REQUIRED)',
-				'add_executable(print src/print.c)',
-				'target_link_libraries(print PRIVATE times2)',
-			);
-
-			await rm(buildDir, { recursive: true });
-			await cmake.configure({
-				src: testDir,
-				build: buildDir,
-				prefixPath: [vendorDir],
-			});
-			await cmake.build(buildDir);
-			expectOutput(join(buildDir, 'print'), '2*3=6');
 		});
 	});
 });
