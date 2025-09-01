@@ -32,7 +32,10 @@ export interface IConfig {
 // TODO this needs logging to inform user of invalid config /
 // and/or warnings
 // TODO good candidate for unit testing
-export function parseConfig(config: unknown, basePath?: string): config is IConfig {
+export function parseConfig(
+	config: unknown,
+	basePath?: string,
+): config is IConfig {
 	if (!isJsObject(config)) {
 		return false;
 	}
@@ -50,7 +53,7 @@ export function parseConfig(config: unknown, basePath?: string): config is IConf
 			}
 
 			for (let i = 0; i < paths.length; ++i) {
-				if (typeof(paths[i]) !== 'string') {
+				if (typeof paths[i] !== 'string') {
 					return false;
 				}
 
@@ -71,7 +74,9 @@ export function parseConfig(config: unknown, basePath?: string): config is IConf
 
 export function readConfigFile(path: string): IConfig | null {
 	if (!path.endsWith('.json')) {
-		throw new Error(`esmakefile-cmake config file '${path}' must have a '.json' extension`);
+		throw new Error(
+			`esmakefile-cmake config file '${path}' must have a '.json' extension`,
+		);
 	}
 
 	let contents: string;
@@ -91,11 +96,11 @@ export function readConfigFile(path: string): IConfig | null {
 }
 
 function isJsObject(value: unknown): value is Record<string, unknown> {
-	if (!(value && typeof(value) === 'object')) {
+	if (!(value && typeof value === 'object')) {
 		return false;
 	}
 
-	if (typeof(value.hasOwnProperty) !== 'function') {
+	if (typeof value.hasOwnProperty !== 'function') {
 		return false;
 	}
 

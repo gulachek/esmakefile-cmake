@@ -16,6 +16,6 @@ has a named `Distribution` to be packaged.
 The following are the packages:
 
 | name | version |
-|------|---------|
+| ---- | ------- |
 | a    | 0.1.0   |
 |      |         |

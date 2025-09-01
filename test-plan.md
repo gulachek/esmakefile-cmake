@@ -7,10 +7,11 @@ based on documentation, and it's important to prove that users
 will be able to compile, link, and run programs on supported
 compilers and operating systems.
 
-With the complexity of 
+With the complexity of
+
 - A development time build system
 - CMake package generation with parallel functionality to the
-   dev build system
+  dev build system
 - Downstream package consumption of these generated packages
   needing testing
 
@@ -24,6 +25,7 @@ which should be a small bit of functionality. The test code
 currently resides in `src/spec/DistributionSpec.ts`.
 
 The functionality that should go here is
+
 - Build system dependency management (prereqs/postreqs update
   build appropriately)
 - `compile-commands.json` generation
@@ -33,7 +35,7 @@ The functionality that should go here is
 
 These are test packages that the tests assume are installed in
 the system prior to being run. They live in `src/spec/upstream`
-and are installed with `cmake`.  
+and are installed with `cmake`.
 
 If specific upstream configuration is needed, such as exercising
 the variations of `findPackage`, that should be added here.
@@ -106,5 +108,3 @@ put everything in one directory (since that's a current
 limitation **TODO**) and rebuilding/reinstalling the upstream
 packages is a waste of time because these packages are
 independent of `esmakefile-cmake`.
-
-

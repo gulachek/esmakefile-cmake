@@ -181,13 +181,13 @@ export class Distribution {
 			// TODO - this.make.abs(Path.src('pkgconfig')) for
 			// override
 			this.make.abs(Path.build('pkgconfig')),
-			resolve('vendor/lib/pkgconfig')
+			resolve('vendor/lib/pkgconfig'),
 		);
 
 		this._parseConfig();
 
 		this._pkg = new PkgConfig({
-			searchPaths: this._pkgSearchPaths
+			searchPaths: this._pkgSearchPaths,
 		});
 
 		const compilerArgs: ICompilerArgs = {

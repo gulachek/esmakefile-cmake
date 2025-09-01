@@ -32,26 +32,38 @@ interface TestCase {
 	prose: string;
 }
 
-function parsePlan(obj: unknown, path: string[], plan: Map<string, TestCase>): void {
+function parsePlan(
+	obj: unknown,
+	path: string[],
+	plan: Map<string, TestCase>,
+): void {
 	if (!(obj && typeof obj === 'object')) {
-		throw new Error(`Error parsing plan.yaml. Value at path '${path}' is not an object.`);
+		throw new Error(
+			`Error parsing plan.yaml. Value at path '${path}' is not an object.`,
+		);
 	}
 
 	if ('group' in obj) {
 		const group = obj['group'];
 		if (typeof group !== 'string') {
-			throw new Error(`Error parsing plan.yaml. 'group' at path '${path}' is not a string.`);
+			throw new Error(
+				`Error parsing plan.yaml. 'group' at path '${path}' is not a string.`,
+			);
 		}
 
 		const groupPath = [...path, group];
 
 		if (!('plan' in obj)) {
-			throw new Error(`Error parsing plan.yaml. 'plan' for group '${groupPath.join('.')}' does not exist.`);
+			throw new Error(
+				`Error parsing plan.yaml. 'plan' for group '${groupPath.join('.')}' does not exist.`,
+			);
 		}
 
 		const groupPlan = obj['plan'];
 		if (!Array.isArray(groupPlan)) {
-			throw new Error(`Error parsing plan.yaml. 'plan' for group '${groupPath.join('.')}' is not an Array.`);
+			throw new Error(
+				`Error parsing plan.yaml. 'plan' for group '${groupPath.join('.')}' is not an Array.`,
+			);
 		}
 
 		for (const child of groupPlan) {
@@ -60,24 +72,32 @@ function parsePlan(obj: unknown, path: string[], plan: Map<string, TestCase>): v
 	} else if ('case' in obj) {
 		const testCase = obj['case'];
 		if (typeof testCase !== 'string') {
-			throw new Error(`Error parsing plan.yaml. 'case' at path '${path}' is not a string.`);
+			throw new Error(
+				`Error parsing plan.yaml. 'case' at path '${path}' is not a string.`,
+			);
 		}
 
 		const id = [...path, testCase].join('.');
 
 		if (plan.has(id)) {
-			throw new Error(`Error parsing plan.yaml. Test case '${id}' has multiple definitions.`);
+			throw new Error(
+				`Error parsing plan.yaml. Test case '${id}' has multiple definitions.`,
+			);
 		}
 
 		if (!('prose' in obj && typeof obj['prose'] === 'string')) {
-			throw new Error(`Error parsing plan.yaml. 'prose' for case '${id}' is either missing or not a string.`);
+			throw new Error(
+				`Error parsing plan.yaml. 'prose' for case '${id}' is either missing or not a string.`,
+			);
 		}
 
 		const prose = obj['prose'];
 
 		plan.set(id, { id, prose });
 	} else {
-		throw new Error(`Error parsing plan.yaml. Object at path '${path}' has neither a 'group' nor a 'case' definition.`);
+		throw new Error(
+			`Error parsing plan.yaml. Object at path '${path}' has neither a 'group' nor a 'case' definition.`,
+		);
 	}
 }
 
@@ -112,34 +132,34 @@ interface TestResult {
 }
 
 function spawnAsync(exe: string, args?: string[]): Promise<string> {
-  return new Promise<string>((resolve, reject) => {
+	return new Promise<string>((resolve, reject) => {
 		args = args || [];
-    const child = spawn(exe, args, { stdio: ["ignore", "pipe", "pipe"] });
+		const child = spawn(exe, args, { stdio: ['ignore', 'pipe', 'pipe'] });
 
-    const outChunks: Buffer[] = [];
-    const errChunks: Buffer[] = [];
+		const outChunks: Buffer[] = [];
+		const errChunks: Buffer[] = [];
 
-    child.stdout.on("data", chunk => outChunks.push(Buffer.from(chunk)));
-    child.stderr.on("data", chunk => errChunks.push(Buffer.from(chunk)));
+		child.stdout.on('data', (chunk) => outChunks.push(Buffer.from(chunk)));
+		child.stderr.on('data', (chunk) => errChunks.push(Buffer.from(chunk)));
 
-    child.on("error", reject);
+		child.on('error', reject);
 
-    child.on("close", (code, signal) => {
-      const stdout = Buffer.concat(outChunks).toString("utf8");
-      const stderr = Buffer.concat(errChunks).toString("utf8");
+		child.on('close', (code, signal) => {
+			const stdout = Buffer.concat(outChunks).toString('utf8');
+			const stderr = Buffer.concat(errChunks).toString('utf8');
 
-      if (code === 0 && signal == null) {
-        resolve(stdout);
-      } else {
-        const err = new Error(
-          `Command failed: ${exe} ${args.join(" ")} (code ${code}${
-            signal ? `, signal ${signal}` : ""
-          })\n${stderr}`
-        );
-        reject(err);
-      }
-    });
-  });
+			if (code === 0 && signal == null) {
+				resolve(stdout);
+			} else {
+				const err = new Error(
+					`Command failed: ${exe} ${args.join(' ')} (code ${code}${
+						signal ? `, signal ${signal}` : ''
+					})\n${stderr}`,
+				);
+				reject(err);
+			}
+		});
+	});
 }
 
 async function runTestExe(exe: string): Promise<TestResult[]> {
@@ -155,7 +175,9 @@ async function runTestExe(exe: string): Promise<TestResult[]> {
 
 		const eqIndex = line.indexOf('=');
 		if (eqIndex === -1) {
-			throw new Error(`Invalid output from exe '${exe}'. Line had no '=': ${line}`);
+			throw new Error(
+				`Invalid output from exe '${exe}'. Line had no '=': ${line}`,
+			);
 		}
 
 		const id = line.substr(0, eqIndex).trim();
@@ -166,7 +188,9 @@ async function runTestExe(exe: string): Promise<TestResult[]> {
 		} else if (result === '0') {
 			results.push({ id, passed: false });
 		} else {
-			throw new Error(`Invalid output from exe '${exe}'. Line neither indicated '0' nor '1': ${line}`);
+			throw new Error(
+				`Invalid output from exe '${exe}'. Line neither indicated '0' nor '1': ${line}`,
+			);
 		}
 	}
 
@@ -174,18 +198,32 @@ async function runTestExe(exe: string): Promise<TestResult[]> {
 }
 
 interface IRunEsmakefileOpts {
-	makeJs: PathLike,
-	outDir: BuildPathLike,
-	srcDir: PathLike,
-	target: string
+	makeJs: PathLike;
+	outDir: BuildPathLike;
+	srcDir: PathLike;
+	target: string;
 }
 
-function runEsmake(args: RecipeArgs, opts: IRunEsmakefileOpts): Promise<boolean> {
+function runEsmake(
+	args: RecipeArgs,
+	opts: IRunEsmakefileOpts,
+): Promise<boolean> {
 	const makeJs = Path.src(opts.makeJs);
 	const outDir = Path.build(opts.outDir);
 	const srcDir = Path.src(opts.srcDir);
 
-	const proc = spawn(nodeExe, [args.abs(makeJs), '--outdir', args.abs(outDir), '--srcdir', args.abs(srcDir), opts.target], { stdio: 'pipe', cwd: '.test' });
+	const proc = spawn(
+		nodeExe,
+		[
+			args.abs(makeJs),
+			'--outdir',
+			args.abs(outDir),
+			'--srcdir',
+			args.abs(srcDir),
+			opts.target,
+		],
+		{ stdio: 'pipe', cwd: '.test' },
+	);
 
 	proc.stdout.pipe(args.logStream, { end: false });
 	proc.stderr.pipe(args.logStream, { end: false });
@@ -224,9 +262,12 @@ cli((make) => {
 
 	// TODO: make this independent from distribution-spec by not deleting .test dir over and over again in that spec
 	make.add(esmakefileCmakeConfig, ['distribution-spec'], (args) => {
-		return writeFile(args.abs(esmakefileCmakeConfig), JSON.stringify({
-			addPkgConfigSearchPaths: [join(upstreamVendorDir, 'lib', 'pkgconfig')]
-		}));
+		return writeFile(
+			args.abs(esmakefileCmakeConfig),
+			JSON.stringify({
+				addPkgConfigSearchPaths: [join(upstreamVendorDir, 'lib', 'pkgconfig')],
+			}),
+		);
 	});
 
 	make.add(aTarball, [esmakefileCmakeConfig], (args) => {
@@ -234,22 +275,37 @@ cli((make) => {
 			makeJs: 'dist/spec/pkg/a/make.js',
 			srcDir: 'src/spec/pkg/a',
 			outDir: aTarball.dir(),
-			target: aTarball.basename
+			target: aTarball.basename,
 		});
 	});
 
 	make.add(aCmake, [aTarball, 'reset'], async (args) => {
-		const result = await args.spawn('tar', ['xzf', args.abs(aTarball), '-C', args.abs(aCmake.dir()), '--strip-components=1']);
+		const result = await args.spawn('tar', [
+			'xzf',
+			args.abs(aTarball),
+			'-C',
+			args.abs(aCmake.dir()),
+			'--strip-components=1',
+		]);
 		if (!result) {
 			return false;
 		}
 
 		const list = await spawnAsync('tar', ['tzf', args.abs(aTarball)]);
 		const t1Index = list.indexOf('t1.c');
-		allResults.push({ id: 'e2e.addTest.omitted-from-package', passed: t1Index === -1 });
+		allResults.push({
+			id: 'e2e.addTest.omitted-from-package',
+			passed: t1Index === -1,
+		});
 
-		const licenseTxt = await readFile(args.abs(aCmake.dir().join('LICENSE.txt')), 'utf8');
-		allResults.push({ id: 'e2e.Distribution.package-copies-license', passed: licenseTxt.indexOf("Fake license for 'a'") >= 0 });
+		const licenseTxt = await readFile(
+			args.abs(aCmake.dir().join('LICENSE.txt')),
+			'utf8',
+		);
+		allResults.push({
+			id: 'e2e.Distribution.package-copies-license',
+			passed: licenseTxt.indexOf("Fake license for 'a'") >= 0,
+		});
 		return true;
 	});
 
@@ -257,16 +313,19 @@ cli((make) => {
 		const pkgBuild = args.abs(pkgBuildDir);
 
 		const cmakeTxt = pkgUnpackDir.join('CMakeLists.txt');
-		await writeFile(args.abs(cmakeTxt), [
-			'cmake_minimum_required(VERSION 3.10)',
-			'project(E2E)',
-			'add_subdirectory(a)'
-		].join('\n'));
+		await writeFile(
+			args.abs(cmakeTxt),
+			[
+				'cmake_minimum_required(VERSION 3.10)',
+				'project(E2E)',
+				'add_subdirectory(a)',
+			].join('\n'),
+		);
 
 		await cmake.configure({
 			src: args.abs(cmakeTxt.dir()),
 			build: pkgBuild,
-			prefixPath: [args.abs(pkgVendorDir), upstreamVendorDir]
+			prefixPath: [args.abs(pkgVendorDir), upstreamVendorDir],
 		});
 
 		await cmake.build(pkgBuild, { config: 'Release' });
@@ -274,7 +333,9 @@ cli((make) => {
 	});
 
 	make.add('run-e1', ['package-install', 'reset'], async (args) => {
-		const results = await runTestExe(args.abs(Path.build(exe('vendor/bin/e1'))));
+		const results = await runTestExe(
+			args.abs(Path.build(exe('vendor/bin/e1'))),
+		);
 		allResults.push(...results);
 	});
 
@@ -286,11 +347,10 @@ cli((make) => {
 			makeJs: downstreamDist.join('d1/make.js'),
 			srcDir: downstreamSrc.join('d1'),
 			outDir: d1Esmake.dir().dir(),
-			target: exe('d1/d1')
+			target: exe('d1/d1'),
 		});
 
-		if (!success)
-			return false;
+		if (!success) return false;
 
 		return args.spawn(args.abs(d1Esmake), []);
 	});
@@ -320,7 +380,9 @@ cli((make) => {
 
 		if (missedCases.size > 0) {
 			allPassed = false;
-			args.logStream.write(`Planned test cases had no results: ${Array.from(missedCases).join(', ')}\n`);
+			args.logStream.write(
+				`Planned test cases had no results: ${Array.from(missedCases).join(', ')}\n`,
+			);
 		}
 
 		return allPassed;

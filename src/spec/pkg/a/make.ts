@@ -24,7 +24,7 @@ import { writeFile } from 'node:fs/promises';
 cli((make) => {
 	const d = new Distribution(make, {
 		name: 'a',
-		version: '0.1.0'
+		version: '0.1.0',
 	});
 
 	const zero = d.findPackage('zero');
@@ -60,16 +60,16 @@ cli((make) => {
 	d.addExecutable({
 		name: 'e1',
 		src: ['src/e1.c', genC],
-		linkTo: [zero, one, two, hello]
+		linkTo: [zero, one, two, hello],
 	});
 
 	d.addTest({
 		name: 't1',
-		src: ['test/t1.c']
+		src: ['test/t1.c'],
 	});
 
 	d.addLibrary({
 		name: 'a',
-		src: ['src/a.c']
+		src: ['src/a.c'],
 	});
 });
