@@ -120,7 +120,7 @@ const pkgBuildDir = Path.build('pkg/build');
 const downstreamSrc = Path.src('src/spec/downstream');
 const downstreamDist = Path.src('dist/spec/downstream');
 const downstreamEsmakeDir = Path.build('downstream/esmake');
-const downstreamCmakeDir = Path.build('downstream/cmake');
+//const downstreamCmakeDir = Path.build('downstream/cmake');
 
 function exe(path: string): string {
 	return platform() === 'win32' ? path + '.exe' : path;
@@ -180,9 +180,9 @@ async function runTestExe(exe: string): Promise<TestResult[]> {
 			);
 		}
 
-		const id = line.substr(0, eqIndex).trim();
+		const id = line.substring(0, eqIndex).trim();
 
-		const result = line.substr(eqIndex + 1).trim();
+		const result = line.substring(eqIndex + 1).trim();
 		if (result === '1') {
 			results.push({ id, passed: true });
 		} else if (result === '0') {
@@ -245,7 +245,7 @@ cli((make) => {
 
 	make.add('test', ['dev', 'pkg']);
 
-	make.add('install-upstream', (args) => {
+	make.add('install-upstream', (_) => {
 		return installUpstream(upstreamVendorBuildDir, upstreamVendorDir);
 	});
 
@@ -340,7 +340,6 @@ cli((make) => {
 	});
 
 	const d1Esmake = downstreamEsmakeDir.join(exe('d1/d1/d1'));
-	const d1Cmake = downstreamCmakeDir.join(exe('d1/d1'));
 
 	make.add(d1Esmake, ['install-upstream', 'package-install'], async (args) => {
 		const success = await runEsmake(args, {
