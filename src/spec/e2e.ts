@@ -120,7 +120,7 @@ const pkgBuildDir = Path.build('pkg/build');
 const downstreamSrc = Path.src('src/spec/downstream');
 const downstreamDist = Path.src('dist/spec/downstream');
 const downstreamEsmakeDir = Path.build('downstream/esmake');
-//const downstreamCmakeDir = Path.build('downstream/cmake');
+const downstreamCmakeDir = Path.build('downstream/cmake');
 
 function exe(path: string): string {
 	return platform() === 'win32' ? path + '.exe' : path;
@@ -361,6 +361,7 @@ cli((make) => {
 	});
 
 	const d1Esmake = downstreamEsmakeDir.join(exe('d1/d1/d1'));
+	const d1Cmake = downstreamCmakeDir.join(exe('d1/d1'));
 
 	make.add(d1Esmake, ['package-install', 'reset'], async (args) => {
 		const success = await runEsmake(args, {
@@ -376,7 +377,24 @@ cli((make) => {
 		allResults.push(...results);
 	});
 
-	make.add('pkg', [d1Esmake, 'run-e1'], (args) => {
+	make.add(d1Cmake, ['package-install', 'reset'], async (args) => {
+		const buildDir = args.abs(d1Cmake.dir());
+
+		await cmake.configure({
+			src: args.abs(downstreamSrc.join('d1')),
+			build: buildDir,
+			prefixPath: [args.abs(pkgVendorDir), upstreamVendorDir],
+		});
+
+		await cmake.build(buildDir, { config: 'Release' });
+
+		const results = await runTestExe(args.abs(d1Cmake), {
+			pkg: 'cmake-config',
+		});
+		allResults.push(...results);
+	});
+
+	make.add('pkg', [d1Esmake, d1Cmake, 'run-e1'], (args) => {
 		let allPassed = true;
 		const missedCases = new Set<string>();
 		for (const [id, _] of plan) {

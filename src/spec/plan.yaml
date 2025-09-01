@@ -38,7 +38,9 @@ plan:
   - group: addLibrary
     plan:
       - case: installs-pkgconfig
-        prose: A library installs a `.pc` file with the same name as the library that links to the library.
+        prose: A library installs a `.pc` file that links to the library with the same name as the library.
+      - case: installs-cmake-config
+        prose: A library installs a CMake config file that links to the library with the same name as the library.
   - group: addTest
     plan:
       - case: omitted-from-package
