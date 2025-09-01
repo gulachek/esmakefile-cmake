@@ -32,12 +32,7 @@ import { spawnSync } from 'node:child_process';
 import { chdir, cwd } from 'node:process';
 import { run } from './run.js';
 
-const testDir = resolve('.test');
-const srcDir = join(testDir, 'src');
-const buildDir = join(testDir, 'build');
-const includeDir = join(testDir, 'include');
-const vendorDir = join(testDir, 'vendor');
-const pkgconfigDir = join(vendorDir, 'lib', 'pkgconfig');
+const globalTestDir = join(resolve('.test'), 'dev');
 
 async function updateTarget(
 	make: Makefile,
@@ -72,6 +67,12 @@ async function updateTarget(
 describe('Distribution', function () {
 	this.timeout(30000); // give some time for compiler
 	let make: Makefile;
+	let testDir: string;
+	let srcDir: string;
+	let buildDir: string;
+	let includeDir: string;
+	let vendorDir: string;
+	let pkgconfigDir: string;
 
 	const allNames = new Set<string>();
 
@@ -82,20 +83,27 @@ describe('Distribution', function () {
 		allNames.add(name);
 
 		it(name, async () => {
-			make = new Makefile({
-				srcRoot: testDir,
-				buildRoot: buildDir,
-			});
+			testDir = join(globalTestDir, name);
+			srcDir = join(testDir, 'src');
+			buildDir = join(testDir, 'build');
+			includeDir = join(testDir, 'include');
+			vendorDir = join(testDir, 'vendor');
+			pkgconfigDir = join(vendorDir, 'lib', 'pkgconfig');
 
+			await mkdir(testDir, { recursive: true });
 			await mkdir(includeDir, { recursive: true });
 			await mkdir(srcDir, { recursive: true });
 			const prevDir = cwd();
 			chdir(testDir);
 
+			make = new Makefile({
+				srcRoot: testDir,
+				buildRoot: buildDir,
+			});
+
 			await impl();
 
 			chdir(prevDir);
-			await rm(testDir, { recursive: true });
 		});
 	}
 
