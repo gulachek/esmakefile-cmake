@@ -26,7 +26,6 @@ import {
 	BuildPathLike,
 } from 'esmakefile';
 import { mkdir, rm, writeFile, readFile, cp } from 'node:fs/promises';
-import { existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { platform } from 'node:os';
 import { spawnSync } from 'node:child_process';
@@ -141,7 +140,6 @@ describe('Distribution', function () {
 	}
 
 	describe('development', () => {
-
 		// builds a single file executable
 		test('single-file-exe', async () => {
 			await writePath(
