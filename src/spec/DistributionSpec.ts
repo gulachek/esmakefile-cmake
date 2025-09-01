@@ -1168,7 +1168,6 @@ describe('Distribution', function () {
 
 	describe('installation', () => {
 		let oldDir: string = '';
-		let distArchive: Path;
 
 		before(async () => {
 			make = new Makefile({
@@ -1228,8 +1227,6 @@ describe('Distribution', function () {
 				cStd: 11,
 				cxxStd: 20,
 			});
-
-			distArchive = d.dist;
 
 			const notFound = d.findPackage('not-found');
 
@@ -1294,17 +1291,6 @@ describe('Distribution', function () {
 		after(async () => {
 			chdir(oldDir);
 			await rm(testDir, { recursive: true });
-		});
-
-		it('copies expected files to distribution', () => {
-			// just to make sure we're in right cwd
-			const result = spawnSync('tar', ['tfz', make.abs(distArchive)], {
-				encoding: 'utf8',
-			});
-
-			const p = 'test-1.2.3';
-			const output = result.output.join('').split(/\r?\n/);
-			expect(output).to.contain(`${p}/src/printv.c`); // src
 		});
 
 		it('installs a library w/ pkgconfig', async () => {

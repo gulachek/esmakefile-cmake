@@ -51,7 +51,7 @@ cli((make) => {
 		},
 	});
 
-	const genC = Path.build('gen.c');
+	const genC = Path.build('src/gen.c');
 
 	make.add(genC, (args) => {
 		return writeFile(args.abs(genC), 'int gen12() { return 12; }');

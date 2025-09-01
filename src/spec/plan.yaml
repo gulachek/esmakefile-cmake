@@ -4,6 +4,14 @@ plan:
     plan:
       - case: package-copies-license
         prose: Package creation copies `LICENSE.txt` from source into the package.
+      - case: package-copies-exe-static-src
+        prose: >-
+          Package creation copies a source file given to `addExecutable` in source directory
+          into package directory with same relative path.
+      - case: package-copies-exe-generated-src
+        prose: >-
+          Package creation copies a source file given to `addExecutable` in build directory
+          into package directory with same relative path.
   - group: addExecutable
     plan:
       - case: install-to-bin

@@ -280,11 +280,13 @@ cli((make) => {
 	});
 
 	make.add(aCmake, [aTarball, 'reset'], async (args) => {
+		const aPkg = aCmake.dir();
+
 		const result = await args.spawn('tar', [
 			'xzf',
 			args.abs(aTarball),
 			'-C',
-			args.abs(aCmake.dir()),
+			args.abs(aPkg),
 			'--strip-components=1',
 		]);
 		if (!result) {
@@ -299,13 +301,26 @@ cli((make) => {
 		});
 
 		const licenseTxt = await readFile(
-			args.abs(aCmake.dir().join('LICENSE.txt')),
+			args.abs(aPkg.join('LICENSE.txt')),
 			'utf8',
 		);
 		allResults.push({
 			id: 'e2e.Distribution.package-copies-license',
 			passed: licenseTxt.indexOf("Fake license for 'a'") >= 0,
 		});
+
+		const e1Src = await readFile(args.abs(aPkg.join('src/e1.c')), 'utf8');
+		allResults.push({
+			id: 'e2e.Distribution.package-copies-exe-static-src',
+			passed: !!e1Src,
+		});
+
+		const genSrc = await readFile(args.abs(aPkg.join('src/gen.c')), 'utf8');
+		allResults.push({
+			id: 'e2e.Distribution.package-copies-exe-generated-src',
+			passed: !!genSrc,
+		});
+
 		return true;
 	});
 
