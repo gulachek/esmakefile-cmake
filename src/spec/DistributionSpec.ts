@@ -34,6 +34,36 @@ import { run } from './run.js';
 
 const globalTestDir = join(resolve('.test'), 'dev');
 
+class Timer {
+	ms: number;
+	complete: boolean;
+
+	private _resolve: () => void;
+	private _timeout: NodeJS.Timeout;
+
+	constructor(ms: number) {
+		this.ms = ms;
+		this.complete = false;
+	}
+
+	start(): Promise<void> {
+		return new Promise<void>((res) => {
+			this._resolve = res;
+			this._timeout = setTimeout(() => this._fire(), this.ms);
+		});
+	}
+
+	stop(): void {
+		clearTimeout(this._timeout);
+		this._resolve();
+	}
+
+	private _fire(): void {
+		this._resolve();
+		this.complete = true;
+	}
+}
+
 async function updateTarget(
 	make: Makefile,
 	goal?: BuildPathLike,
@@ -64,8 +94,7 @@ async function updateTarget(
 	expect(warnings.length).to.equal(0);
 }
 
-describe('Distribution', function () {
-	this.timeout(30000); // give some time for compiler
+(async function () {
 	let make: Makefile;
 	let testDir: string;
 	let srcDir: string;
@@ -76,35 +105,41 @@ describe('Distribution', function () {
 
 	const allNames = new Set<string>();
 
-	function test(name: string, impl: () => Promise<void>) {
+	async function test(name: string, impl: () => Promise<void>): Promise<void> {
 		if (allNames.has(name)) {
 			throw new Error(`Duplicate name '${name}' passed to test(...)`);
 		}
 		allNames.add(name);
 
-		it(name, async () => {
-			testDir = join(globalTestDir, name);
-			srcDir = join(testDir, 'src');
-			buildDir = join(testDir, 'build');
-			includeDir = join(testDir, 'include');
-			vendorDir = join(testDir, 'vendor');
-			pkgconfigDir = join(vendorDir, 'lib', 'pkgconfig');
+		testDir = join(globalTestDir, name);
+		srcDir = join(testDir, 'src');
+		buildDir = join(testDir, 'build');
+		includeDir = join(testDir, 'include');
+		vendorDir = join(testDir, 'vendor');
+		pkgconfigDir = join(vendorDir, 'lib', 'pkgconfig');
 
-			await mkdir(testDir, { recursive: true });
-			await mkdir(includeDir, { recursive: true });
-			await mkdir(srcDir, { recursive: true });
-			const prevDir = cwd();
-			chdir(testDir);
+		await mkdir(testDir, { recursive: true });
+		await mkdir(includeDir, { recursive: true });
+		await mkdir(srcDir, { recursive: true });
+		const prevDir = cwd();
+		chdir(testDir);
 
-			make = new Makefile({
-				srcRoot: testDir,
-				buildRoot: buildDir,
-			});
-
-			await impl();
-
-			chdir(prevDir);
+		make = new Makefile({
+			srcRoot: testDir,
+			buildRoot: buildDir,
 		});
+
+		const t = new Timer(30000);
+
+		await Promise.race([impl(), t.start()]);
+
+		if (t.complete) {
+			throw new Error(`Timed out (> ${t.ms} ms)`);
+		} else {
+			t.stop();
+		}
+
+		chdir(prevDir);
 	}
 
 	function writePath(src: PathLike, ...lines: string[]): Promise<void> {
@@ -123,7 +158,7 @@ describe('Distribution', function () {
 	}
 
 	// builds a single file executable
-	test('single-file-exe', async () => {
+	await test('single-file-exe', async () => {
 		await writePath(
 			'src/hello.c',
 			'#include <stdio.h>',
@@ -144,7 +179,7 @@ describe('Distribution', function () {
 	});
 
 	// updates when source updates
-	test('src-is-prereq', async () => {
+	await test('src-is-prereq', async () => {
 		await writePath(
 			'src/hello.c',
 			'#include <stdio.h>',
@@ -173,7 +208,7 @@ describe('Distribution', function () {
 	});
 
 	// can compile multiple source file exe
-	test('multi-src-exe', async () => {
+	await test('multi-src-exe', async () => {
 		await writePath(
 			'src/hello.c',
 			'#include <stdio.h>',
@@ -200,7 +235,7 @@ describe('Distribution', function () {
 	});
 
 	// links mixed c/c++ as a c++ executable
-	test('mixed-lang-exe', async () => {
+	await test('mixed-lang-exe', async () => {
 		await writePath(
 			'src/hello.cpp',
 			'#include <iostream>',
@@ -227,7 +262,7 @@ describe('Distribution', function () {
 	});
 
 	// links mixed c/c++ as a c++ library
-	test('mixed-lang-lib', async () => {
+	await test('mixed-lang-lib', async () => {
 		await writePath(
 			'src/one.cpp',
 			'#include <string>',
@@ -269,7 +304,7 @@ describe('Distribution', function () {
 	});
 
 	// can specify c11
-	test('c11-lang', async () => {
+	await test('c11-lang', async () => {
 		await writePath(
 			'src/printv.c',
 			'#include <stdio.h>',
@@ -294,7 +329,7 @@ describe('Distribution', function () {
 	});
 
 	// can specify c17
-	test('c17-lang', async () => {
+	await test('c17-lang', async () => {
 		await writePath(
 			'src/printv.c',
 			'#include <stdio.h>',
@@ -319,7 +354,7 @@ describe('Distribution', function () {
 	});
 
 	// can specify c++17
-	test('cxx17-lang', async () => {
+	await test('cxx17-lang', async () => {
 		await writePath(
 			'src/printv.cpp',
 			'#include <cstdio>',
@@ -345,7 +380,7 @@ describe('Distribution', function () {
 	});
 
 	// can specify c++20
-	test('cxx20-lang', async () => {
+	await test('cxx20-lang', async () => {
 		await writePath(
 			'src/printv.cpp',
 			'#include <cstdio>',
@@ -371,7 +406,7 @@ describe('Distribution', function () {
 	});
 
 	// includes the "include" dir by default
-	test('default-include', async () => {
+	await test('default-include', async () => {
 		await writePath('include/val.h', '#define VAL 4');
 
 		await writePath(
@@ -395,7 +430,7 @@ describe('Distribution', function () {
 	});
 
 	// recompiles after updating header
-	test('header-is-postreq', async () => {
+	await test('header-is-postreq', async () => {
 		await writePath('include/val.h', '#define VAL 4');
 
 		await writePath(
@@ -422,7 +457,7 @@ describe('Distribution', function () {
 	});
 
 	// compiles and links libraries
-	test('links-transitive-lib', async () => {
+	await test('links-transitive-lib', async () => {
 		await writePath('include/add.h', 'int add(int a, int b);');
 
 		await writePath('include/zero.h', 'int zero();');
@@ -472,7 +507,7 @@ describe('Distribution', function () {
 	});
 
 	// carries includes from linked libraries
-	test('includes-dependency-header', async () => {
+	await test('includes-dependency-header', async () => {
 		const customInclude = join(testDir, 'custom-include');
 		await mkdir(customInclude);
 
@@ -567,7 +602,7 @@ describe('Distribution', function () {
 	}
 
 	// can find an external package for linking
-	test('link-pkgconfig', async () => {
+	await test('link-pkgconfig', async () => {
 		await setupExternal();
 
 		const d = new Distribution(make, {
@@ -587,7 +622,7 @@ describe('Distribution', function () {
 	});
 
 	// can specify a pkgconfig version
-	test('specify-pkgconfig-version', async () => {
+	await test('specify-pkgconfig-version', async () => {
 		await setupExternal();
 
 		const d = new Distribution(make, {
@@ -609,7 +644,7 @@ describe('Distribution', function () {
 	});
 
 	// fails if incompatible version specified
-	test('fails-pkgconfig-version-incompatible', async () => {
+	await test('fails-pkgconfig-version-incompatible', async () => {
 		await setupExternal();
 
 		const d = new Distribution(make, {
@@ -632,7 +667,7 @@ describe('Distribution', function () {
 	});
 
 	// can specify an external package for linking differently between pkgconfig and cmake
-	test('cmake-pkgconfig-different-name', async () => {
+	await test('cmake-pkgconfig-different-name', async () => {
 		await setupExternal();
 
 		const d = new Distribution(make, {
@@ -655,7 +690,7 @@ describe('Distribution', function () {
 	});
 
 	// can find an external package for linking to a library
-	test('link-pkgconfig-lib', async () => {
+	await test('link-pkgconfig-lib', async () => {
 		await setupExternal();
 
 		const d = new Distribution(make, {
@@ -708,7 +743,7 @@ describe('Distribution', function () {
 	});
 
 	// can specify a CMake version
-	test('cmake-find-package-version', async () => {
+	await test('cmake-find-package-version', async () => {
 		await setupExternal();
 
 		await writePath('LICENSE.txt', 'Test license');
@@ -746,7 +781,7 @@ describe('Distribution', function () {
 	});
 
 	// can link between distributions
-	test('cross-distribution-link', async () => {
+	await test('cross-distribution-link', async () => {
 		await mkdir(join(testDir, 'a', 'include'), { recursive: true });
 		await mkdir(join(testDir, 'b', 'include'), { recursive: true });
 
@@ -803,7 +838,7 @@ describe('Distribution', function () {
 	});
 
 	// can add a unit test executable
-	test('unit-test-run', async () => {
+	await test('unit-test-run', async () => {
 		await mkdir(join(testDir, 'test'));
 		await writePath('include/add.h', 'int add(int a, int b);');
 		await writePath('src/add.c', 'int add(int a, int b) { return a + b; }');
@@ -842,7 +877,7 @@ describe('Distribution', function () {
 	});
 
 	// has access to unit test executable via binary
-	test('unit-test-binary', async () => {
+	await test('unit-test-binary', async () => {
 		await mkdir(join(testDir, 'test'));
 		await writePath('include/add.h', 'int add(int a, int b);');
 		await writePath('src/add.c', 'int add(int a, int b) { return a + b; }');
@@ -924,7 +959,7 @@ describe('Distribution', function () {
 	}
 
 	// is static by default
-	test('default-static', async () => {
+	await test('default-static', async () => {
 		await setupStaticDynamic();
 
 		const d = new Distribution(make, {
@@ -947,7 +982,7 @@ describe('Distribution', function () {
 	});
 
 	// is static when explicitly set to default type
-	test('explicit-default-static', async () => {
+	await test('explicit-default-static', async () => {
 		await setupStaticDynamic();
 
 		const d = new Distribution(make, {
@@ -971,7 +1006,7 @@ describe('Distribution', function () {
 	});
 
 	// is static when explicitly set to static
-	test('static-static', async () => {
+	await test('static-static', async () => {
 		await setupStaticDynamic();
 
 		const d = new Distribution(make, {
@@ -995,7 +1030,7 @@ describe('Distribution', function () {
 	});
 
 	// is dynamic when explicitly set to dynamic
-	test('dynamic-dynamic', async () => {
+	await test('dynamic-dynamic', async () => {
 		await setupStaticDynamic();
 
 		const d = new Distribution(make, {
@@ -1019,7 +1054,7 @@ describe('Distribution', function () {
 	});
 
 	// is dynamic when default is set to dynamic
-	test('default-dynamic', async () => {
+	await test('default-dynamic', async () => {
 		await setupStaticDynamic();
 
 		await writePath(
@@ -1049,7 +1084,7 @@ describe('Distribution', function () {
 	});
 
 	// is dynamic when default is set to dynamic and library has explicit default type
-	test('explicit-default-dynamic', async () => {
+	await test('explicit-default-dynamic', async () => {
 		await setupStaticDynamic();
 
 		await writePath(
@@ -1080,7 +1115,7 @@ describe('Distribution', function () {
 	});
 
 	// generates a compile_commands.json file
-	test('compile-commands', async () => {
+	await test('compile-commands', async () => {
 		await mkdir(pkgconfigDir, { recursive: true });
 
 		const add = Path.src('src/add.c');
@@ -1142,7 +1177,7 @@ describe('Distribution', function () {
 			make.abs(test),
 		]);
 	});
-});
+})();
 
 /** Defines CXXLANG macro from __cplusplus or _MSVC_LANG */
 const cxxLangMacro = [
