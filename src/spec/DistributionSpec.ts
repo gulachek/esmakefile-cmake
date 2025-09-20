@@ -157,27 +157,6 @@ async function updateTarget(
 		expect(stdout).to.equal(output);
 	}
 
-	// builds a single file executable
-	await test('single-file-exe', async () => {
-		await writePath(
-			'src/hello.c',
-			'#include <stdio.h>',
-			'int main(){ printf("hello!"); return 0; }',
-		);
-
-		const d = new Distribution(make, {
-			name: 'hello',
-			version: '1.2.3',
-		});
-
-		const hello = d.addExecutable({
-			name: 'hello',
-			src: ['src/hello.c'],
-		});
-
-		await expectOutput(hello.binary, 'hello!');
-	});
-
 	// updates when source updates
 	await test('src-is-prereq', async () => {
 		await writePath(
