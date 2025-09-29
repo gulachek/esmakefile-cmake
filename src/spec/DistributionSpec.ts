@@ -340,8 +340,7 @@ async function updateTarget(
 		await testOutput('e2e.Distribution.c17-dev-exe', t.binary, '201710');
 	});
 
-	// can specify c++17
-	await test('cxx17-lang', async () => {
+	await test('dev6', async () => {
 		await writePath(
 			'src/printv.cpp',
 			'#include <cstdio>',
@@ -363,11 +362,10 @@ async function updateTarget(
 			src: ['src/printv.cpp'],
 		});
 
-		await expectOutput(t.binary, '201703');
+		await testOutput('e2e.Distribution.cxx17-dev-exe', t.binary, '201703');
 	});
 
-	// can specify c++20
-	await test('cxx20-lang', async () => {
+	await test('dev7', async () => {
 		await writePath(
 			'src/printv.cpp',
 			'#include <cstdio>',
@@ -389,7 +387,7 @@ async function updateTarget(
 			src: ['src/printv.cpp'],
 		});
 
-		await expectOutput(t.binary, '202002');
+		await testOutput('e2e.Distribution.cxx20-dev-exe', t.binary, '202002');
 	});
 
 	// includes the "include" dir by default
