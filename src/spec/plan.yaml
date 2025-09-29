@@ -47,6 +47,8 @@ plan:
         prose: A library installs a `.pc` file that links to the library with the same name as the library.
       - case: installs-cmake-config
         prose: A library installs a CMake config file that links to the library with the same name as the library.
+      - case: links-c-cxx-as-cxx
+        prose: When a C and C++ source (detected by extension) is given to addLibrary, the executable is linked with a C++ compiler.
   - group: addTest
     plan:
       - case: omitted-from-package

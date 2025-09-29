@@ -251,8 +251,7 @@ async function updateTarget(
 		);
 	});
 
-	// links mixed c/c++ as a c++ library
-	await test('mixed-lang-lib', async () => {
+	await test('dev3', async () => {
 		await writePath(
 			'src/one.cpp',
 			'#include <string>',
@@ -290,7 +289,7 @@ async function updateTarget(
 			linkTo: [nums],
 		});
 
-		await expectOutput(main.binary, '2');
+		await testOutput('e2e.addLibrary.links-c-cxx-as-cxx', main.binary, '2');
 	});
 
 	// can specify c11
