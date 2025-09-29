@@ -90,9 +90,9 @@ async function updateTarget(
 		console.warn('Warning:', w.msg);
 	}
 
-	expect(result).to.be.true;
 	expect(errors.length).to.equal(0);
 	expect(warnings.length).to.equal(0);
+	expect(result).to.be.true;
 }
 
 (async function () {
@@ -221,8 +221,7 @@ async function updateTarget(
 		);
 	});
 
-	// links mixed c/c++ as a c++ executable
-	await test('mixed-lang-exe', async () => {
+	await test('dev2', async () => {
 		await writePath(
 			'src/hello.cpp',
 			'#include <iostream>',
@@ -245,7 +244,11 @@ async function updateTarget(
 			src: ['src/main.c', 'src/hello.cpp'],
 		});
 
-		await expectOutput(hello.binary, 'hello!');
+		await testOutput(
+			'e2e.addExecutable.links-c-cxx-as-cxx',
+			hello.binary,
+			'hello!',
+		);
 	});
 
 	// links mixed c/c++ as a c++ library
