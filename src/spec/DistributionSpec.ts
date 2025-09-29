@@ -292,8 +292,7 @@ async function updateTarget(
 		await testOutput('e2e.addLibrary.links-c-cxx-as-cxx', main.binary, '2');
 	});
 
-	// can specify c11
-	await test('c11-lang', async () => {
+	await test('dev4', async () => {
 		await writePath(
 			'src/printv.c',
 			'#include <stdio.h>',
@@ -314,7 +313,7 @@ async function updateTarget(
 			src: ['src/printv.c'],
 		});
 
-		await expectOutput(t.binary, '201112');
+		await testOutput('e2e.Distribution.c11-dev-exe', t.binary, '201112');
 	});
 
 	// can specify c17

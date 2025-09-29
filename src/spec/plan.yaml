@@ -2,6 +2,8 @@ group: e2e
 plan:
   - group: Distribution
     plan:
+      - case: c11-dev-exe
+        prose: Specifying C11 makes a development build of a C executable target C11.
       - case: package-copies-license
         prose: Package creation copies `LICENSE.txt` from source into the package.
       - case: package-copies-exe-static-src
