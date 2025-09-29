@@ -316,8 +316,7 @@ async function updateTarget(
 		await testOutput('e2e.Distribution.c11-dev-exe', t.binary, '201112');
 	});
 
-	// can specify c17
-	await test('c17-lang', async () => {
+	await test('dev5', async () => {
 		await writePath(
 			'src/printv.c',
 			'#include <stdio.h>',
@@ -338,7 +337,7 @@ async function updateTarget(
 			src: ['src/printv.c'],
 		});
 
-		await expectOutput(t.binary, '201710');
+		await testOutput('e2e.Distribution.c17-dev-exe', t.binary, '201710');
 	});
 
 	// can specify c++17
