@@ -161,7 +161,7 @@ async function updateTarget(
 	}
 
 	async function testOutput(
-		testCase: string,
+		testCase: string | string[],
 		p: PathLike,
 		output: string,
 	): Promise<void> {
@@ -172,7 +172,10 @@ async function updateTarget(
 
 		const { stdout } = spawnSync(make.abs(path), { encoding: 'utf8' });
 		const result = stdout === output ? 1 : 0;
-		console.log(`${testCase} = ${result}`);
+		const cases = Array.isArray(testCase) ? testCase : [testCase];
+		for (const t of cases) {
+			console.log(`${t} = ${result}`);
+		}
 	}
 
 	async function expectOutput(p: PathLike, output: string): Promise<void> {
@@ -185,39 +188,14 @@ async function updateTarget(
 		expect(stdout).to.equal(output);
 	}
 
-	await test('src-is-prereq', async () => {
-		const src = addTextFile(
-			'src/hello.c',
-			'#include <stdio.h>',
-			'int main(){ printf("hello!"); return 0; }',
-		);
-
-		const d = new Distribution(make, {
-			name: 'hello',
-			version: '1.2.3',
-		});
-
-		const hello = d.addExecutable({
-			name: 'hello',
-			src: [src],
-		});
-
-		await testOutput(
-			'e2e.addExecutable.source-is-prereq',
-			hello.binary,
-			'hello!',
-		);
-	});
-
-	// can compile multiple source file exe
-	await test('multi-src-exe', async () => {
+	await test('dev1', async () => {
 		await writePath(
 			'src/hello.c',
 			'#include <stdio.h>',
 			'void hello(){ printf("hello!"); }',
 		);
 
-		await writePath(
+		const main = addTextFile(
 			'src/main.c',
 			'extern void hello();',
 			'int main(){ hello(); return 0; }',
@@ -230,10 +208,17 @@ async function updateTarget(
 
 		const hello = d.addExecutable({
 			name: 'hello',
-			src: ['src/main.c', 'src/hello.c'],
+			src: ['src/hello.c', main],
 		});
 
-		await expectOutput(hello.binary, 'hello!');
+		await testOutput(
+			[
+				'e2e.addExecutable.source-is-prereq',
+				'e2e.addExecutable.multi-source-dev',
+			],
+			hello.binary,
+			'hello!',
+		);
 	});
 
 	// links mixed c/c++ as a c++ executable
