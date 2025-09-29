@@ -26,6 +26,10 @@ plan:
         prose: A source file given to addExecutable is a prereq of the output executable. When it updates, the executable needs to update, too.
       - case: multi-source-dev
         prose: Multiple sources can comprise an executable in a development build.
+      - case: default-include
+        prose: By default, an executable includes the `@src/include` directory.
+      - case: header-is-postreq
+        prose: Updating a header file required by a compilation makes an executable require updates.
       - case: links-c-cxx-as-cxx
         prose: When a C and C++ source (detected by extension) is given to addExecutable, the executable is linked with a C++ compiler.
       - case: install-to-bin

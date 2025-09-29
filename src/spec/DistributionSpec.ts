@@ -189,15 +189,19 @@ async function updateTarget(
 	}
 
 	await test('dev1', async () => {
+		await writePath('include/hello.h', 'void hello();');
+		await writePath('include/punct.h', "#define PUNCT '!'");
+
 		await writePath(
 			'src/hello.c',
+			'#include "punct.h"',
 			'#include <stdio.h>',
-			'void hello(){ printf("hello!"); }',
+			'void hello(){ printf("hello%c", PUNCT); }',
 		);
 
 		const main = addTextFile(
 			'src/main.c',
-			'extern void hello();',
+			'#include "hello.h"',
 			'int main(){ hello(); return 0; }',
 		);
 
@@ -215,9 +219,18 @@ async function updateTarget(
 			[
 				'e2e.addExecutable.source-is-prereq',
 				'e2e.addExecutable.multi-source-dev',
+				'e2e.addExecutable.default-include',
 			],
 			hello.binary,
 			'hello!',
+		);
+
+		await writePath('include/punct.h', "#define PUNCT '?'");
+
+		await testOutput(
+			['e2e.addExecutable.header-is-postreq'],
+			hello.binary,
+			'hello?',
 		);
 	});
 
@@ -388,57 +401,6 @@ async function updateTarget(
 		});
 
 		await testOutput('e2e.Distribution.cxx20-dev-exe', t.binary, '202002');
-	});
-
-	// includes the "include" dir by default
-	await test('default-include', async () => {
-		await writePath('include/val.h', '#define VAL 4');
-
-		await writePath(
-			'src/main.c',
-			'#include "val.h"',
-			'#include <stdio.h>',
-			'int main(){ printf("%d", VAL); return 0; }',
-		);
-
-		const d = new Distribution(make, {
-			name: 'test',
-			version: '1.2.3',
-		});
-
-		const hello = d.addExecutable({
-			name: 'test',
-			src: ['src/main.c'],
-		});
-
-		await expectOutput(hello.binary, '4');
-	});
-
-	// recompiles after updating header
-	await test('header-is-postreq', async () => {
-		await writePath('include/val.h', '#define VAL 4');
-
-		await writePath(
-			'src/main.c',
-			'#include "val.h"',
-			'#include <stdio.h>',
-			'int main(){ printf("%d", VAL); return 0; }',
-		);
-
-		const d = new Distribution(make, {
-			name: 'test',
-			version: '1.2.3',
-		});
-
-		const hello = d.addExecutable({
-			name: 'test',
-			src: ['src/main.c'],
-		});
-
-		await expectOutput(hello.binary, '4');
-
-		await writePath('include/val.h', '#define VAL 5');
-		await expectOutput(hello.binary, '5');
 	});
 
 	// compiles and links libraries
