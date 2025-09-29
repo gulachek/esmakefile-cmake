@@ -24,6 +24,7 @@ import {
 	experimental,
 	Path,
 	BuildPathLike,
+	IBuildPath,
 } from 'esmakefile';
 import { mkdir, rm, writeFile, readFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
@@ -142,9 +143,36 @@ async function updateTarget(
 		chdir(prevDir);
 	}
 
-	function writePath(src: PathLike, ...lines: string[]): Promise<void> {
+	function writeLines(rawPath: string, lines: string[]): Promise<void> {
 		let sep = platform() === 'win32' ? '\r\n' : '\n';
-		return writeFile(make.abs(Path.src(src)), lines.join(sep), 'utf8');
+		return writeFile(rawPath, lines.join(sep), 'utf8');
+	}
+
+	function addTextFile(path: BuildPathLike, ...lines: string[]): IBuildPath {
+		const buildPath = Path.build(path);
+		make.add(buildPath, (args) => {
+			return writeLines(args.abs(buildPath), lines);
+		});
+		return buildPath;
+	}
+
+	function writePath(src: PathLike, ...lines: string[]): Promise<void> {
+		return writeLines(make.abs(Path.src(src)), lines);
+	}
+
+	async function testOutput(
+		testCase: string,
+		p: PathLike,
+		output: string,
+	): Promise<void> {
+		const path = Path.src(p);
+		if (path.isBuildPath()) {
+			await updateTarget(make, path);
+		}
+
+		const { stdout } = spawnSync(make.abs(path), { encoding: 'utf8' });
+		const result = stdout === output ? 1 : 0;
+		console.log(`${testCase} = ${result}`);
 	}
 
 	async function expectOutput(p: PathLike, output: string): Promise<void> {
@@ -157,9 +185,8 @@ async function updateTarget(
 		expect(stdout).to.equal(output);
 	}
 
-	// updates when source updates
 	await test('src-is-prereq', async () => {
-		await writePath(
+		const src = addTextFile(
 			'src/hello.c',
 			'#include <stdio.h>',
 			'int main(){ printf("hello!"); return 0; }',
@@ -172,18 +199,14 @@ async function updateTarget(
 
 		const hello = d.addExecutable({
 			name: 'hello',
-			src: ['src/hello.c'],
+			src: [src],
 		});
 
-		await expectOutput(hello.binary, 'hello!');
-
-		await writePath(
-			'src/hello.c',
-			'#include <stdio.h>',
-			'int main(){ printf("hi."); return 0; }',
+		await testOutput(
+			'e2e.addExecutable.source-is-prereq',
+			hello.binary,
+			'hello!',
 		);
-
-		await expectOutput(hello.binary, 'hi.');
 	});
 
 	// can compile multiple source file exe

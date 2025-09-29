@@ -14,6 +14,8 @@ plan:
           into package directory with same relative path.
   - group: addExecutable
     plan:
+      - case: source-is-prereq
+        prose: A source file given to addExecutable is a prereq of the output executable. When it updates, the executable needs to update, too.
       - case: install-to-bin
         prose: When installed, an executable created with `addExecutable` is available in `<prefix>/bin`.
       - case: packages-generated-src
