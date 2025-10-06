@@ -1,67 +1,73 @@
 group: e2e
 plan:
-  - group: Distribution
+  - group: dev
     plan:
-      - case: c11-dev-exe
-        prose: Specifying C11 makes a development build of a C executable target C11.
-      - case: c17-dev-exe
-        prose: Specifying C17 makes a development build of a C executable target C17.
-      - case: cxx17-dev-exe
-        prose: Specifying C++17 makes a development build of a C++ executable target C++17.
-      - case: cxx20-dev-exe
-        prose: Specifying C++20 makes a development build of a C++ executable target C++20.
-      - case: package-copies-license
+      - group: Distribution
+        plan:
+          - case: c11-exe
+            prose: Specifying C11 makes a development build of a C executable target C11.
+          - case: c17-exe
+            prose: Specifying C17 makes a development build of a C executable target C17.
+          - case: cxx17-exe
+            prose: Specifying C++17 makes a development build of a C++ executable target C++17.
+          - case: cxx20-exe
+            prose: Specifying C++20 makes a development build of a C++ executable target C++20.
+      - group: addExecutable
+        plan:
+          - case: source-is-prereq
+            prose: A source file given to addExecutable is a prereq of the output executable. When it updates, the executable needs to update, too.
+          - case: multi-source
+            prose: Multiple sources can comprise an executable in a development build.
+          - case: default-include
+            prose: By default, an executable includes the `@src/include` directory.
+          - case: header-is-postreq
+            prose: Updating a header file required by a compilation makes an executable require updates.
+          - case: links-c-cxx-as-cxx
+            prose: When a C and C++ source (detected by extension) is given to addExecutable, the executable is linked with a C++ compiler.
+      - group: addLibrary
+        plan:
+          - case: links-c-cxx-as-cxx
+            prose: When a C and C++ source (detected by extension) is given to addLibrary, the executable is linked with a C++ compiler.
+  - group: dist
+    plan:
+      - case: copies-license
         prose: Package creation copies `LICENSE.txt` from source into the package.
-      - case: package-copies-exe-static-src
+      - case: copies-exe-static-src
         prose: >-
           Package creation copies a source file given to `addExecutable` in source directory
           into package directory with same relative path.
-      - case: package-copies-exe-generated-src
+      - case: copies-exe-generated-src
         prose: >-
           Package creation copies a source file given to `addExecutable` in build directory
           into package directory with same relative path.
-  - group: addExecutable
-    plan:
-      - case: source-is-prereq
-        prose: A source file given to addExecutable is a prereq of the output executable. When it updates, the executable needs to update, too.
-      - case: multi-source-dev
-        prose: Multiple sources can comprise an executable in a development build.
-      - case: default-include
-        prose: By default, an executable includes the `@src/include` directory.
-      - case: header-is-postreq
-        prose: Updating a header file required by a compilation makes an executable require updates.
-      - case: links-c-cxx-as-cxx
-        prose: When a C and C++ source (detected by extension) is given to addExecutable, the executable is linked with a C++ compiler.
-      - case: install-to-bin
-        prose: When installed, an executable created with `addExecutable` is available in `<prefix>/bin`.
-      - case: packages-generated-src
+      - case: packages-generated-src # TODO redundant
         prose: An executable that has a generated `src` file packages the generated file in the distribution.
-      - case: findPackage-implicit-cmake-name-install
+      - case: exe-install-to-bin
+        prose: When installed, an executable created with `addExecutable` is available in `<prefix>/bin`.
+      - case: findPackage-implicit-cmake-name
         prose: An executable with a `linkTo` a `findPackage(<name>)` finds a CMake package with that `name` and links to a library with `name`.
-      - case: findPackage-explicit-cmake-name-install
+      - case: findPackage-explicit-cmake-name
         prose: >-
           An executable with a `linkTo` a `findPackage({ cmake: <name>, ... })` finds a
           CMake package with that `name` and links to a library named `name`.
-      - case: findPackage-explicit-cmake-target-install
+      - case: findPackage-explicit-cmake-target
         prose: >-
           An executable with a `linkTo` a `findPackage({ cmake: { name: <name>,
           libraryTarget: <target>, ... }, ... })` finds a CMake package with that `name` and
           links to a library named `target`.
-      - case: findPackage-explicit-cmake-component-install
+      - case: findPackage-explicit-cmake-component
         prose: >-
           An executable with a `linkTo` a `findPackage({ cmake: { name: <name>,
           libraryTarget: <target>, component: <component>, ... }, ... })` finds a CMake package
           with that `name` with a component named `component` and links to a library named
           `target`.
-  - group: addLibrary
-    plan:
-      - case: installs-pkgconfig
-        prose: A library installs a `.pc` file that links to the library with the same name as the library.
-      - case: installs-cmake-config
-        prose: A library installs a CMake config file that links to the library with the same name as the library.
-      - case: links-c-cxx-as-cxx
-        prose: When a C and C++ source (detected by extension) is given to addLibrary, the executable is linked with a C++ compiler.
-  - group: addTest
-    plan:
-      - case: omitted-from-package
+      - case: test-omitted-from-package
         prose: After creating a package, source provided to `addTest` is not copied to the package.
+  - group: cm-pkg
+    plan:
+      - case: name
+        prose: A library installs a CMake config file that links to the library with the same name as the library.
+  - group: pc-pkg
+    plan:
+      - case: name
+        prose: A library created with `addLibrary` installs a `.pc` file that is linked with the same name as the library.

@@ -217,9 +217,9 @@ async function updateTarget(
 
 		await testOutput(
 			[
-				'e2e.addExecutable.source-is-prereq',
-				'e2e.addExecutable.multi-source-dev',
-				'e2e.addExecutable.default-include',
+				'e2e.dev.addExecutable.source-is-prereq',
+				'e2e.dev.addExecutable.multi-source',
+				'e2e.dev.addExecutable.default-include',
 			],
 			hello.binary,
 			'hello!',
@@ -228,7 +228,7 @@ async function updateTarget(
 		await writePath('include/punct.h', "#define PUNCT '?'");
 
 		await testOutput(
-			['e2e.addExecutable.header-is-postreq'],
+			['e2e.dev.addExecutable.header-is-postreq'],
 			hello.binary,
 			'hello?',
 		);
@@ -258,7 +258,7 @@ async function updateTarget(
 		});
 
 		await testOutput(
-			'e2e.addExecutable.links-c-cxx-as-cxx',
+			'e2e.dev.addExecutable.links-c-cxx-as-cxx',
 			hello.binary,
 			'hello!',
 		);
@@ -302,7 +302,7 @@ async function updateTarget(
 			linkTo: [nums],
 		});
 
-		await testOutput('e2e.addLibrary.links-c-cxx-as-cxx', main.binary, '2');
+		await testOutput('e2e.dev.addLibrary.links-c-cxx-as-cxx', main.binary, '2');
 	});
 
 	await test('dev4', async () => {
@@ -326,7 +326,7 @@ async function updateTarget(
 			src: ['src/printv.c'],
 		});
 
-		await testOutput('e2e.Distribution.c11-dev-exe', t.binary, '201112');
+		await testOutput('e2e.dev.Distribution.c11-exe', t.binary, '201112');
 	});
 
 	await test('dev5', async () => {
@@ -350,7 +350,7 @@ async function updateTarget(
 			src: ['src/printv.c'],
 		});
 
-		await testOutput('e2e.Distribution.c17-dev-exe', t.binary, '201710');
+		await testOutput('e2e.dev.Distribution.c17-exe', t.binary, '201710');
 	});
 
 	await test('dev6', async () => {
@@ -375,7 +375,7 @@ async function updateTarget(
 			src: ['src/printv.cpp'],
 		});
 
-		await testOutput('e2e.Distribution.cxx17-dev-exe', t.binary, '201703');
+		await testOutput('e2e.dev.Distribution.cxx17-exe', t.binary, '201703');
 	});
 
 	await test('dev7', async () => {
@@ -400,7 +400,7 @@ async function updateTarget(
 			src: ['src/printv.cpp'],
 		});
 
-		await testOutput('e2e.Distribution.cxx20-dev-exe', t.binary, '202002');
+		await testOutput('e2e.dev.Distribution.cxx20-exe', t.binary, '202002');
 	});
 
 	// compiles and links libraries

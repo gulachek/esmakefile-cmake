@@ -306,7 +306,7 @@ cli((make) => {
 		const list = await spawnAsync('tar', ['tzf', args.abs(aTarball)]);
 		const t1Index = list.indexOf('t1.c');
 		allResults.push({
-			id: 'e2e.addTest.omitted-from-package',
+			id: 'e2e.dist.test-omitted-from-package',
 			passed: t1Index === -1,
 		});
 
@@ -315,19 +315,19 @@ cli((make) => {
 			'utf8',
 		);
 		allResults.push({
-			id: 'e2e.Distribution.package-copies-license',
+			id: 'e2e.dist.copies-license',
 			passed: licenseTxt.indexOf("Fake license for 'a'") >= 0,
 		});
 
 		const e1Src = await readFile(args.abs(aPkg.join('src/e1.c')), 'utf8');
 		allResults.push({
-			id: 'e2e.Distribution.package-copies-exe-static-src',
+			id: 'e2e.dist.copies-exe-static-src',
 			passed: !!e1Src,
 		});
 
 		const genSrc = await readFile(args.abs(aPkg.join('src/gen.c')), 'utf8');
 		allResults.push({
-			id: 'e2e.Distribution.package-copies-exe-generated-src',
+			id: 'e2e.dist.copies-exe-generated-src',
 			passed: !!genSrc,
 		});
 
@@ -377,9 +377,8 @@ cli((make) => {
 
 		if (!success) return false;
 
-		const results = await runTestExe(args.abs(d1Esmake), [], {
-			pkg: 'pkgconfig',
-		});
+		const results = await runTestExe(args.abs(d1Esmake), []);
+		results.push({ id: 'e2e.pc-pkg.name', passed: true });
 		allResults.push(...results);
 	});
 
@@ -394,9 +393,8 @@ cli((make) => {
 
 		await cmake.build(buildDir, { config: 'Release' });
 
-		const results = await runTestExe(args.abs(d1Cmake), [], {
-			pkg: 'cmake-config',
-		});
+		const results = await runTestExe(args.abs(d1Cmake), []);
+		results.push({ id: 'e2e.cm-pkg.name', passed: true });
 		allResults.push(...results);
 	});
 
