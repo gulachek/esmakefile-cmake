@@ -12,6 +12,8 @@ plan:
             prose: Specifying C++17 makes a development build of a C++ executable target C++17.
           - case: cxx20-exe
             prose: Specifying C++20 makes a development build of a C++ executable target C++20.
+          - case: test-target
+            prose: A `Distribution` will have a test recipe called 'test-<dist-name>' that runs all tests.
       - group: addExecutable
         plan:
           - case: source-is-prereq
@@ -28,10 +30,30 @@ plan:
             prose: The include directories of a direct library dependency are included in the executable's compile.
           - case: links-transitive-library
             prose: The symbols from a transitive library in a `Distribution` are linked to an executable.
+          - case: can-link-to-other-distribution
+            prose: A library created with one `Distribution` can be linked to an executable in another `Distribution`.
       - group: addLibrary
         plan:
           - case: links-c-cxx-as-cxx
             prose: When a C and C++ source (detected by extension) is given to addLibrary, the executable is linked with a C++ compiler.
+          - case: can-link-to-other-distribution
+            prose: A library created with one `Distribution` can be linked to a library in another `Distribution`.
+          - case: type-static-implicit-default
+            prose: A library is by default linked as a static library.
+          - case: type-static-explicit-default
+            prose: A library is by linked as a static library by default when given type `default`.
+          - case: type-explicit-static
+            prose: A library is by linked as a static library by default when given type `static`.
+          - case: type-explicit-dynamic
+            prose: A library is by linked as a dynamic library by default when given type `dynamic`.
+          - case: type-config-dynamic-implicit-default
+            prose: >-
+              A library is by linked as a dynamic library when `esmakefile-cmake.config.json` has `buildSharedLibs: true`
+              and the library has no explicit type.
+          - case: type-config-dynamic-explicit-default
+            prose: >-
+              A library is by linked as a dynamic library when `esmakefile-cmake.config.json` has `buildSharedLibs: true`
+              and the library has type `default`.
       - group: findPackage
         plan:
           - case: searches-pkgconfig-by-name
@@ -47,6 +69,18 @@ plan:
               A name specific to `pkg-config` can be given by calling `findPackage({ pkgconfig: 'name' })`.
           - case: fails-incompatible-version
             prose: The build fails if an incompatible `pkg-config` version is given to `findPackage`.
+      - group: addTest
+        plan:
+          - case: returns-obj-with-run
+            prose: Returns an object with a `run` target that will run the test.
+          - case: returns-obj-with-binary
+            prose: Returns an object with a `binary` target that is the test's executable binary.
+      - group: addCompileCommands
+        plan:
+          - case: generates-json-db
+            prose: >-
+              The target returned by `addCompileCommands` generates a `compile-commands.json` file that's
+              compatible with `clang-check`.
   - group: dist
     plan:
       - case: copies-license
@@ -82,6 +116,10 @@ plan:
           `target`.
       - case: test-omitted-from-package
         prose: After creating a package, source provided to `addTest` is not copied to the package.
+      - group: findPackage
+        plan:
+          - case: can-specify-version
+            prose: A version given to `findPackage` can specify a CMake version.
   - group: cm-pkg
     plan:
       - case: name

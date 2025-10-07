@@ -675,8 +675,7 @@ async function updateTarget(
 		);
 	});
 
-	// can specify a CMake version
-	await test('cmake-find-package-version', async () => {
+	await test('dev14', async () => {
 		await setupExternal();
 
 		await writePath('LICENSE.txt', 'Test license');
@@ -710,11 +709,12 @@ async function updateTarget(
 		const re = /^find_package\(add\s+2.3.4\s+REQUIRED\)$/;
 		const l = lines.find((l) => l.match(re));
 
-		expect(l, 'Did not find match').not.to.be.empty;
+		await report('e2e.dist.findPackage.can-specify-version', () => {
+			expect(l, 'Did not find match').not.to.be.empty;
+		});
 	});
 
-	// can link between distributions
-	await test('cross-distribution-link', async () => {
+	await test('dev15', async () => {
 		await mkdir(join(testDir, 'a', 'include'), { recursive: true });
 		await mkdir(join(testDir, 'b', 'include'), { recursive: true });
 
@@ -767,11 +767,16 @@ async function updateTarget(
 			linkTo: [libb],
 		});
 
-		await expectOutput(main.binary, 'b');
+		await report(
+			[
+				'e2e.dev.addLibrary.can-link-to-other-distribution',
+				'e2e.dev.addExecutable.can-link-to-other-distribution',
+			],
+			() => expectOutput(main.binary, 'b'),
+		);
 	});
 
-	// can add a unit test executable
-	await test('unit-test-run', async () => {
+	await test('dev16', async () => {
 		await mkdir(join(testDir, 'test'));
 		await writePath('include/add.h', 'int add(int a, int b);');
 		await writePath('src/add.c', 'int add(int a, int b) { return a + b; }');
@@ -794,52 +799,27 @@ async function updateTarget(
 			src: ['src/add.c'],
 		});
 
-		const { run } = d.addTest({
+		const { run, binary } = d.addTest({
 			name: 'add_test',
 			src: ['test/add_test.c'],
 			linkTo: [add],
 		});
 
-		await updateTarget(make, run);
+		await report('e2e.dev.addTest.returns-obj-with-run', async () => {
+			await updateTarget(make, run);
+		});
+
+		await report('e2e.dev.addTest.returns-obj-with-binary', () =>
+			expectOutput(binary, ''),
+		);
 
 		// also make sure test-add rule works
 		await rm(buildDir, { recursive: true });
 
-		expect(d.test.rel()).to.equal('test-add');
-		await updateTarget(make, 'test-add');
-	});
-
-	// has access to unit test executable via binary
-	await test('unit-test-binary', async () => {
-		await mkdir(join(testDir, 'test'));
-		await writePath('include/add.h', 'int add(int a, int b);');
-		await writePath('src/add.c', 'int add(int a, int b) { return a + b; }');
-
-		await writePath(
-			'test/add_test.c',
-			'#include "add.h"',
-			'int main() {',
-			'return add(2,2) != 4;',
-			'}',
-		);
-
-		const d = new Distribution(make, {
-			name: 'add',
-			version: '1.2.3',
+		await report('e2e.dev.Distribution.test-target', async () => {
+			expect(d.test.rel()).to.equal('test-add');
+			await updateTarget(make, 'test-add');
 		});
-
-		const add = d.addLibrary({
-			name: 'add',
-			src: ['src/add.c'],
-		});
-
-		const { binary } = d.addTest({
-			name: 'add_test',
-			src: ['test/add_test.c'],
-			linkTo: [add],
-		});
-
-		await expectOutput(binary, '');
 	});
 
 	async function setupStaticDynamic() {
@@ -891,8 +871,7 @@ async function updateTarget(
 		);
 	}
 
-	// is static by default
-	await test('default-static', async () => {
+	await test('dev18', async () => {
 		await setupStaticDynamic();
 
 		const d = new Distribution(make, {
@@ -911,11 +890,12 @@ async function updateTarget(
 			linkTo: [img],
 		});
 
-		await expectOutput(test.binary, make.abs(test.binary));
+		await report('e2e.dev.addLibrary.type-static-implicit-default', () =>
+			expectOutput(test.binary, make.abs(test.binary)),
+		);
 	});
 
-	// is static when explicitly set to default type
-	await test('explicit-default-static', async () => {
+	await test('dev19', async () => {
 		await setupStaticDynamic();
 
 		const d = new Distribution(make, {
@@ -935,11 +915,12 @@ async function updateTarget(
 			linkTo: [img],
 		});
 
-		await expectOutput(test.binary, make.abs(test.binary));
+		await report('e2e.dev.addLibrary.type-static-explicit-default', () =>
+			expectOutput(test.binary, make.abs(test.binary)),
+		);
 	});
 
-	// is static when explicitly set to static
-	await test('static-static', async () => {
+	await test('dev20', async () => {
 		await setupStaticDynamic();
 
 		const d = new Distribution(make, {
@@ -959,11 +940,12 @@ async function updateTarget(
 			linkTo: [img],
 		});
 
-		await expectOutput(test.binary, make.abs(test.binary));
+		await report('e2e.dev.addLibrary.type-explicit-static', () =>
+			expectOutput(test.binary, make.abs(test.binary)),
+		);
 	});
 
-	// is dynamic when explicitly set to dynamic
-	await test('dynamic-dynamic', async () => {
+	await test('dev21', async () => {
 		await setupStaticDynamic();
 
 		const d = new Distribution(make, {
@@ -983,11 +965,12 @@ async function updateTarget(
 			linkTo: [img],
 		});
 
-		await expectOutput(test.binary, make.abs(img.binary));
+		await report('e2e.dev.addLibrary.type-explicit-dynamic', () =>
+			expectOutput(test.binary, make.abs(img.binary)),
+		);
 	});
 
-	// is dynamic when default is set to dynamic
-	await test('default-dynamic', async () => {
+	await test('dev22', async () => {
 		await setupStaticDynamic();
 
 		await writePath(
@@ -1013,11 +996,13 @@ async function updateTarget(
 			linkTo: [img],
 		});
 
-		await expectOutput(test.binary, make.abs(img.binary));
+		await report(
+			'e2e.dev.addLibrary.type-config-dynamic-implicit-default',
+			() => expectOutput(test.binary, make.abs(img.binary)),
+		);
 	});
 
-	// is dynamic when default is set to dynamic and library has explicit default type
-	await test('explicit-default-dynamic', async () => {
+	await test('dev23', async () => {
 		await setupStaticDynamic();
 
 		await writePath(
@@ -1044,7 +1029,10 @@ async function updateTarget(
 			linkTo: [img],
 		});
 
-		await expectOutput(test.binary, make.abs(img.binary));
+		await report(
+			'e2e.dev.addLibrary.type-config-dynamic-explicit-default',
+			() => expectOutput(test.binary, make.abs(img.binary)),
+		);
 	});
 
 	// generates a compile_commands.json file
@@ -1098,17 +1086,19 @@ async function updateTarget(
 
 		await updateTarget(make, commands);
 
-		const clangCheck = process.env['CLANG_CHECK'];
-		expect(
-			clangCheck,
-			'the CLANG_CHECK environment variable should be specified, but is not',
-		).not.to.be.empty;
-		await run(clangCheck, [
-			'-p',
-			make.buildRoot,
-			make.abs(add),
-			make.abs(test),
-		]);
+		await report('e2e.dev.addCompileCommands.generates-json-db', async () => {
+			const clangCheck = process.env['CLANG_CHECK'];
+			expect(
+				clangCheck,
+				'the CLANG_CHECK environment variable should be specified, but is not',
+			).not.to.be.empty;
+			await run(clangCheck, [
+				'-p',
+				make.buildRoot,
+				make.abs(add),
+				make.abs(test),
+			]);
+		});
 	});
 })();
 
