@@ -160,21 +160,19 @@ async function updateTarget(
 		return writeLines(make.abs(Path.src(src)), lines);
 	}
 
-	async function testOutput(
+	async function report(
 		testCase: string | string[],
-		p: PathLike,
-		output: string,
-	): Promise<void> {
-		const path = Path.src(p);
-		if (path.isBuildPath()) {
-			await updateTarget(make, path);
-		}
-
-		const { stdout } = spawnSync(make.abs(path), { encoding: 'utf8' });
-		const result = stdout === output ? 1 : 0;
-		const cases = Array.isArray(testCase) ? testCase : [testCase];
-		for (const t of cases) {
-			console.log(`${t} = ${result}`);
+		fn: () => void | Promise<void>,
+	) {
+		let result = 0;
+		try {
+			await Promise.resolve(fn());
+			result = 1;
+		} finally {
+			const cases = Array.isArray(testCase) ? testCase : [testCase];
+			for (const t of cases) {
+				console.log(`${t} = ${result}`);
+			}
 		}
 	}
 
@@ -215,22 +213,19 @@ async function updateTarget(
 			src: ['src/hello.c', main],
 		});
 
-		await testOutput(
+		await report(
 			[
 				'e2e.dev.addExecutable.source-is-prereq',
 				'e2e.dev.addExecutable.multi-source',
 				'e2e.dev.addExecutable.default-include',
 			],
-			hello.binary,
-			'hello!',
+			() => expectOutput(hello.binary, 'hello!'),
 		);
 
 		await writePath('include/punct.h', "#define PUNCT '?'");
 
-		await testOutput(
-			['e2e.dev.addExecutable.header-is-postreq'],
-			hello.binary,
-			'hello?',
+		await report(['e2e.dev.addExecutable.header-is-postreq'], () =>
+			expectOutput(hello.binary, 'hello?'),
 		);
 	});
 
@@ -257,10 +252,8 @@ async function updateTarget(
 			src: ['src/main.c', 'src/hello.cpp'],
 		});
 
-		await testOutput(
-			'e2e.dev.addExecutable.links-c-cxx-as-cxx',
-			hello.binary,
-			'hello!',
+		await report('e2e.dev.addExecutable.links-c-cxx-as-cxx', () =>
+			expectOutput(hello.binary, 'hello!'),
 		);
 	});
 
@@ -302,7 +295,9 @@ async function updateTarget(
 			linkTo: [nums],
 		});
 
-		await testOutput('e2e.dev.addLibrary.links-c-cxx-as-cxx', main.binary, '2');
+		await report('e2e.dev.addLibrary.links-c-cxx-as-cxx', () =>
+			expectOutput(main.binary, '2'),
+		);
 	});
 
 	await test('dev4', async () => {
@@ -326,7 +321,9 @@ async function updateTarget(
 			src: ['src/printv.c'],
 		});
 
-		await testOutput('e2e.dev.Distribution.c11-exe', t.binary, '201112');
+		await report('e2e.dev.Distribution.c11-exe', () =>
+			expectOutput(t.binary, '201112'),
+		);
 	});
 
 	await test('dev5', async () => {
@@ -350,7 +347,9 @@ async function updateTarget(
 			src: ['src/printv.c'],
 		});
 
-		await testOutput('e2e.dev.Distribution.c17-exe', t.binary, '201710');
+		await report('e2e.dev.Distribution.c17-exe', () =>
+			expectOutput(t.binary, '201710'),
+		);
 	});
 
 	await test('dev6', async () => {
@@ -375,7 +374,9 @@ async function updateTarget(
 			src: ['src/printv.cpp'],
 		});
 
-		await testOutput('e2e.dev.Distribution.cxx17-exe', t.binary, '201703');
+		await report('e2e.dev.Distribution.cxx17-exe', () =>
+			expectOutput(t.binary, '201703'),
+		);
 	});
 
 	await test('dev7', async () => {
@@ -400,7 +401,9 @@ async function updateTarget(
 			src: ['src/printv.cpp'],
 		});
 
-		await testOutput('e2e.dev.Distribution.cxx20-exe', t.binary, '202002');
+		await report('e2e.dev.Distribution.cxx20-exe', () =>
+			expectOutput(t.binary, '202002'),
+		);
 	});
 
 	await test('dev8', async () => {
@@ -453,13 +456,12 @@ async function updateTarget(
 			linkTo: [add],
 		});
 
-		await testOutput(
+		await report(
 			[
 				'e2e.dev.addExecutable.links-transitive-library',
 				'e2e.dev.addExecutable.includes-direct-dependency-dirs',
 			],
-			test.binary,
-			'4',
+			() => expectOutput(test.binary, '4'),
 		);
 	});
 
@@ -536,13 +538,12 @@ async function updateTarget(
 			linkTo: [addPkg],
 		});
 
-		await testOutput(
+		await report(
 			[
 				'e2e.dev.findPackage.searches-pkgconfig-by-name',
 				'e2e.dev.findPackage.can-link-to-exe',
 			],
-			test.binary,
-			'2+2=4',
+			() => expectOutput(test.binary, '2+2=4'),
 		);
 	});
 
@@ -564,10 +565,8 @@ async function updateTarget(
 			linkTo: [addPkg],
 		});
 
-		await testOutput(
-			'e2e.dev.findPackage.can-specify-version',
-			test.binary,
-			'2+2=4',
+		await report('e2e.dev.findPackage.can-specify-version', () =>
+			expectOutput(test.binary, '2+2=4'),
 		);
 	});
 
