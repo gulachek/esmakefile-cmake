@@ -24,10 +24,26 @@ plan:
             prose: Updating a header file required by a compilation makes an executable require updates.
           - case: links-c-cxx-as-cxx
             prose: When a C and C++ source (detected by extension) is given to addExecutable, the executable is linked with a C++ compiler.
+          - case: includes-direct-dependency-dirs
+            prose: The include directories of a direct library dependency are included in the executable's compile.
+          - case: links-transitive-library
+            prose: The symbols from a transitive library in a `Distribution` are linked to an executable.
       - group: addLibrary
         plan:
           - case: links-c-cxx-as-cxx
             prose: When a C and C++ source (detected by extension) is given to addLibrary, the executable is linked with a C++ compiler.
+      - group: findPackage
+        plan:
+          - case: searches-pkgconfig-by-name
+            prose: When given just a name, `findPackage` will find a `pkg-config` package by the name given.
+          - case: can-link-to-exe
+            prose: The object returned by `findPackage` can be given to `linkTo` for `addExecutable`.
+          - case: can-link-to-lib
+            prose: The object returned by `findPackage` can be given to `linkTo` for `addLibrary`.
+          - case: can-specify-version
+            prose: A `pkg-config` version can be specified like `findPackage('name = 1.2.3')`.
+          - case: fails-incompatible-version
+            prose: The build fails if an incompatible `pkg-config` version is given to `findPackage`.
   - group: dist
     plan:
       - case: copies-license

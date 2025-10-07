@@ -403,9 +403,11 @@ async function updateTarget(
 		await testOutput('e2e.dev.Distribution.cxx20-exe', t.binary, '202002');
 	});
 
-	// compiles and links libraries
-	await test('links-transitive-lib', async () => {
-		await writePath('include/add.h', 'int add(int a, int b);');
+	await test('dev8', async () => {
+		const customInclude = join(testDir, 'custom-include');
+		await mkdir(customInclude);
+
+		await writePath('custom-include/add.h', 'int add(int a, int b);');
 
 		await writePath('include/zero.h', 'int zero();');
 		await writePath(
@@ -441,6 +443,7 @@ async function updateTarget(
 		const add = d.addLibrary({
 			name: 'add',
 			src: ['src/add.c'],
+			includeDirs: ['custom-include'],
 			linkTo: [zero],
 		});
 
@@ -450,47 +453,14 @@ async function updateTarget(
 			linkTo: [add],
 		});
 
-		await expectOutput(test.binary, '4');
-	});
-
-	// carries includes from linked libraries
-	await test('includes-dependency-header', async () => {
-		const customInclude = join(testDir, 'custom-include');
-		await mkdir(customInclude);
-
-		await writePath('custom-include/add.h', 'int add(int a, int b);');
-
-		await writePath(
-			'src/add.c',
-			'#include "add.h"',
-			'int add(int a, int b){ return a + b; }',
+		await testOutput(
+			[
+				'e2e.dev.addExecutable.links-transitive-library',
+				'e2e.dev.addExecutable.includes-direct-dependency-dirs',
+			],
+			test.binary,
+			'4',
 		);
-
-		await writePath(
-			'src/main.c',
-			'#include "add.h"',
-			'#include <stdio.h>',
-			'int main(){ printf("%d", add(2,2)); return 0; }',
-		);
-
-		const d = new Distribution(make, {
-			name: 'test',
-			version: '1.2.3',
-		});
-
-		const add = d.addLibrary({
-			name: 'add',
-			src: ['src/add.c'],
-			includeDirs: ['custom-include'],
-		});
-
-		const test = d.addExecutable({
-			name: 'test',
-			src: ['src/main.c'],
-			linkTo: [add],
-		});
-
-		await expectOutput(test.binary, '4');
 	});
 
 	async function setupExternal() {
@@ -548,8 +518,7 @@ async function updateTarget(
 		);
 	}
 
-	// can find an external package for linking
-	await test('link-pkgconfig', async () => {
+	await test('dev9', async () => {
 		await setupExternal();
 
 		const d = new Distribution(make, {
@@ -557,7 +526,9 @@ async function updateTarget(
 			version: '1.2.3',
 		});
 
-		const addPkg = d.findPackage('add');
+		const addPkg = d.findPackage({
+			pkgconfig: 'add',
+		});
 
 		const test = d.addExecutable({
 			name: 'test',
@@ -565,11 +536,17 @@ async function updateTarget(
 			linkTo: [addPkg],
 		});
 
-		await expectOutput(test.binary, '2+2=4');
+		await testOutput(
+			[
+				'e2e.dev.findPackage.searches-pkgconfig-by-name',
+				'e2e.dev.findPackage.can-link-to-exe',
+			],
+			test.binary,
+			'2+2=4',
+		);
 	});
 
-	// can specify a pkgconfig version
-	await test('specify-pkgconfig-version', async () => {
+	await test('dev10', async () => {
 		await setupExternal();
 
 		const d = new Distribution(make, {
@@ -587,7 +564,11 @@ async function updateTarget(
 			linkTo: [addPkg],
 		});
 
-		await expectOutput(test.binary, '2+2=4');
+		await testOutput(
+			'e2e.dev.findPackage.can-specify-version',
+			test.binary,
+			'2+2=4',
+		);
 	});
 
 	// fails if incompatible version specified
