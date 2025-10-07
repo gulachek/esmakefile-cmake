@@ -42,6 +42,9 @@ plan:
             prose: The object returned by `findPackage` can be given to `linkTo` for `addLibrary`.
           - case: can-specify-version
             prose: A `pkg-config` version can be specified like `findPackage('name = 1.2.3')`.
+          - case: can-specify-explicit-pkgconfig-name
+            prose: >-
+              A name specific to `pkg-config` can be given by calling `findPackage({ pkgconfig: 'name' })`.
           - case: fails-incompatible-version
             prose: The build fails if an incompatible `pkg-config` version is given to `findPackage`.
   - group: dist

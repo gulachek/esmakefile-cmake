@@ -570,8 +570,7 @@ async function updateTarget(
 		);
 	});
 
-	// fails if incompatible version specified
-	await test('fails-pkgconfig-version-incompatible', async () => {
+	await test('dev11', async () => {
 		await setupExternal();
 
 		const d = new Distribution(make, {
@@ -590,11 +589,13 @@ async function updateTarget(
 		});
 
 		const { result } = await experimental.updateTarget(make, test.binary);
-		expect(result).to.be.false;
+
+		await report('e2e.dev.findPackage.fails-incompatible-version', () => {
+			expect(result).to.be.false;
+		});
 	});
 
-	// can specify an external package for linking differently between pkgconfig and cmake
-	await test('cmake-pkgconfig-different-name', async () => {
+	await test('dev12', async () => {
 		await setupExternal();
 
 		const d = new Distribution(make, {
@@ -613,11 +614,14 @@ async function updateTarget(
 			linkTo: [addPkg],
 		});
 
-		await expectOutput(test.binary, '2+2=4');
+		await report(
+			['e2e.dev.findPackage.can-specify-explicit-pkgconfig-name'],
+			() => expectOutput(test.binary, '2+2=4'),
+		);
 	});
 
 	// can find an external package for linking to a library
-	await test('link-pkgconfig-lib', async () => {
+	await test('dev13', async () => {
 		await setupExternal();
 
 		const d = new Distribution(make, {
@@ -666,7 +670,9 @@ async function updateTarget(
 			linkTo: [mul],
 		});
 
-		await expectOutput(test.binary, '2*3=6');
+		await report('e2e.dev.findPackage.can-link-to-lib', () =>
+			expectOutput(test.binary, '2*3=6'),
+		);
 	});
 
 	// can specify a CMake version
