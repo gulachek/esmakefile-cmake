@@ -124,6 +124,8 @@ plan:
             prose: The CMakeLists.txt will include private includes in the compile.
           - case: copies-private
             prose: Generating a distribution copies private include headers to private/include.
+          - case: skips-install-private
+            prose: A private header is not installed.
       - group: findPackage
         plan:
           - case: can-specify-version

@@ -22,7 +22,7 @@ import { cmake } from './cmake.js';
 import { installUpstream } from './upstream.js';
 import { resolve, join } from 'node:path';
 import { writeFile, readFile, rm } from 'node:fs/promises';
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
 import { platform } from 'node:os';
 import { spawn } from 'node:child_process';
 import * as yaml from 'yaml';
@@ -352,8 +352,19 @@ cli((make) => {
 			prefixPath: [args.abs(pkgVendorDir), upstreamVendorDir],
 		});
 
+		const vAbs = args.abs(pkgVendorDir);
 		await cmake.build(pkgBuild, { config: 'Release' });
-		await cmake.install(pkgBuild, { prefix: args.abs(pkgVendorDir) });
+		await cmake.install(pkgBuild, { prefix: vAbs });
+
+		// We know that /.../a/private/include/secret.h is a private
+		// header
+		allResults.push({
+			id: 'e2e.dist.includes.skips-install-private',
+			passed: !(
+				existsSync(join(vAbs, 'include', 'secret.h')) ||
+				existsSync(join(vAbs, 'include', 'private', 'secret.h'))
+			),
+		});
 	});
 
 	make.add('run-e1', ['package-install'], async (args) => {
