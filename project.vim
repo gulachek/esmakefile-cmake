@@ -4,9 +4,12 @@ set path+=.github/**
 set path+=vim/**
 
 nnoremap <Leader>b :!npm run build<CR>
-nnoremap <Leader>d :!npx mocha --inspect-brk -- dist/spec<CR>
+nnoremap <Leader>d :!npx mocha --inspect-brk -- dist/spec/DistributionSpec.js<CR>
 
 nnoremap <Leader>t :!npm test<CR>
+nnoremap <Leader>g :!node dist/spec/e2e.js --outdir .test pkg<CR>
+nnoremap <Leader>v :!node dist/spec/e2e.js --outdir .test dev<CR>
+
 "Use below to test specific case. Can make this better later
 "nnoremap <Leader>t :!npx mocha -f external -- dist/spec<CR>
 

@@ -9,7 +9,7 @@ jobs:
       matrix:
         runner:
           - os: macos-latest
-            clang-check: /opt/homebrew/opt/llvm@15/bin/clang-check
+            clang-check: /opt/homebrew/opt/llvm@18/bin/clang-check
           - os: ubuntu-latest
             clang-check: /usr/bin/clang-check-18
     env:
