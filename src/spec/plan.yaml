@@ -24,6 +24,8 @@ plan:
             prose: By default, an executable includes the `@src/include` directory.
           - case: header-is-postreq
             prose: Updating a header file required by a compilation makes an executable require updates.
+          - case: default-private-include
+            prose: By default, the `private/include` directory is available for header lookup.
           - case: links-c-cxx-as-cxx
             prose: When a C and C++ source (detected by extension) is given to addExecutable, the executable is linked with a C++ compiler.
           - case: includes-direct-dependency-dirs

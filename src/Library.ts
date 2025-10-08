@@ -96,6 +96,7 @@ export interface ILinkedCompilation {
 	outDir: IBuildPath;
 	src: Path[];
 	includeDirs: Path[];
+	privateIncludeDirs: Path[];
 	linkTo: Library[];
 	pkgs: IImportedLibrary[];
 	compileCommands: IBuildPath;

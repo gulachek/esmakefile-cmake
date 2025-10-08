@@ -226,6 +226,8 @@ export class Distribution {
 			includeDirs.push(Path.src('include'));
 		}
 
+		const privateIncludeDirs: Path[] = [Path.src('private/include')];
+
 		const linkTo: Library[] = [];
 		const pkgs: IImportedLibrary[] = [];
 		if (opts.linkTo) {
@@ -262,6 +264,7 @@ export class Distribution {
 			outDir: this.outDir,
 			src: opts.src.map((s) => Path.src(s)),
 			includeDirs,
+			privateIncludeDirs,
 			linkTo,
 			pkgs,
 			compileCommands: this.outDir.join(`.${opts.name}-compile_commands.json`),

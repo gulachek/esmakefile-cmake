@@ -101,6 +101,7 @@ async function updateTarget(
 	let srcDir: string;
 	let buildDir: string;
 	let includeDir: string;
+	let privateIncludeDir: string;
 	let vendorDir: string;
 	let pkgconfigDir: string;
 
@@ -116,11 +117,13 @@ async function updateTarget(
 		srcDir = join(testDir, 'src');
 		buildDir = join(testDir, 'build');
 		includeDir = join(testDir, 'include');
+		privateIncludeDir = join(testDir, 'private', 'include');
 		vendorDir = join(testDir, 'vendor');
 		pkgconfigDir = join(vendorDir, 'lib', 'pkgconfig');
 
 		await mkdir(testDir, { recursive: true });
 		await mkdir(includeDir, { recursive: true });
+		await mkdir(privateIncludeDir, { recursive: true });
 		await mkdir(srcDir, { recursive: true });
 		const prevDir = cwd();
 		chdir(testDir);
@@ -189,6 +192,7 @@ async function updateTarget(
 	await test('dev1', async () => {
 		await writePath('include/hello.h', 'void hello();');
 		await writePath('include/punct.h', "#define PUNCT '!'");
+		await writePath('private/include/zero.h', '#define ZERO 0');
 
 		await writePath(
 			'src/hello.c',
@@ -200,7 +204,8 @@ async function updateTarget(
 		const main = addTextFile(
 			'src/main.c',
 			'#include "hello.h"',
-			'int main(){ hello(); return 0; }',
+			'#include "zero.h"',
+			'int main(){ hello(); return ZERO; }',
 		);
 
 		const d = new Distribution(make, {
@@ -218,6 +223,7 @@ async function updateTarget(
 				'e2e.dev.addExecutable.source-is-prereq',
 				'e2e.dev.addExecutable.multi-source',
 				'e2e.dev.addExecutable.default-include',
+				'e2e.dev.addExecutable.default-private-include',
 			],
 			() => expectOutput(hello.binary, 'hello!'),
 		);
