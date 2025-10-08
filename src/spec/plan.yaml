@@ -36,6 +36,10 @@ plan:
             prose: A library created with one `Distribution` can be linked to an executable in another `Distribution`.
       - group: addLibrary
         plan:
+          - case: default-include
+            prose: By default, an executable includes the `@src/include` directory.
+          - case: default-private-include
+            prose: By default, the `private/include` directory is available for header lookup.
           - case: links-c-cxx-as-cxx
             prose: When a C and C++ source (detected by extension) is given to addLibrary, the executable is linked with a C++ compiler.
           - case: can-link-to-other-distribution

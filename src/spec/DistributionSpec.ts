@@ -419,10 +419,12 @@ async function updateTarget(
 		await writePath('custom-include/add.h', 'int add(int a, int b);');
 
 		await writePath('include/zero.h', 'int zero();');
+		await writePath('private/include/zero_impl.h', '#define ZERO 0');
 		await writePath(
 			'src/zero.c',
 			'#include "zero.h"',
-			'int zero() { return 0; }',
+			'#include "zero_impl.h"',
+			'int zero() { return ZERO; }',
 		);
 
 		await writePath(
@@ -464,6 +466,8 @@ async function updateTarget(
 
 		await report(
 			[
+				'e2e.dev.addLibrary.default-include',
+				'e2e.dev.addLibrary.default-private-include',
 				'e2e.dev.addExecutable.links-transitive-library',
 				'e2e.dev.addExecutable.includes-direct-dependency-dirs',
 			],
