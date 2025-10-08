@@ -118,6 +118,12 @@ plan:
           `target`.
       - case: test-omitted-from-package
         prose: After creating a package, source provided to `addTest` is not copied to the package.
+      - group: includes
+        plan:
+          - case: includes-private
+            prose: The CMakeLists.txt will include private includes in the compile.
+          - case: copies-private
+            prose: Generating a distribution copies private include headers to private/include.
       - group: findPackage
         plan:
           - case: can-specify-version

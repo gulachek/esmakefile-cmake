@@ -304,10 +304,9 @@ cli((make) => {
 		}
 
 		const list = await spawnAsync('tar', ['tzf', args.abs(aTarball)]);
-		const t1Index = list.indexOf('t1.c');
 		allResults.push({
 			id: 'e2e.dist.test-omitted-from-package',
-			passed: t1Index === -1,
+			passed: list.indexOf('t1.c') === -1,
 		});
 
 		const licenseTxt = await readFile(

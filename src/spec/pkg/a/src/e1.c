@@ -5,6 +5,13 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "secret.h"
+#ifdef SECRET
+#define SECRET_FOUND 1
+#else
+#define SECRET_FOUND 0
+#endif
+
 extern int gen12();
 
 int main() {
@@ -19,6 +26,9 @@ int main() {
    * validates that the generated file was packaged correctly.
    */
   printf("e2e.dist.packages-generated-src = %d\n", gen12() == 12);
+
+  printf("e2e.dist.includes.includes-private = %d\n", SECRET_FOUND);
+  printf("e2e.dist.includes.copies-private = %d\n", SECRET_FOUND);
 
   /*
    * zero was referenced with findPackage('zero')
