@@ -628,6 +628,12 @@ export class Distribution {
 					);
 				}
 
+				if (lib.privateIncludeDirs.length > 0) {
+					cmake.push(
+						`\ntarget_include_directories(${lib.name} PRIVATE private/include)`,
+					);
+				}
+
 				const pcReqs: string[] = [];
 				for (const p of lib.pkgs) {
 					cmake.push(

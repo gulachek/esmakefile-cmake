@@ -27,7 +27,7 @@ int main() {
    */
   printf("e2e.dist.packages-generated-src = %d\n", gen12() == 12);
 
-  printf("e2e.dist.includes.includes-private = %d\n", SECRET_FOUND);
+  printf("e2e.dist.includes.exe-includes-private = %d\n", SECRET_FOUND);
   printf("e2e.dist.includes.copies-private = %d\n", SECRET_FOUND);
 
   /*

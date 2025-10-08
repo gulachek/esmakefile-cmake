@@ -365,6 +365,13 @@ cli((make) => {
 				existsSync(join(vAbs, 'include', 'private', 'secret.h'))
 			),
 		});
+
+		// We know that a.c included secret.h, so if it succeeded
+		// building, then it was included
+		allResults.push({
+			id: 'e2e.dist.includes.lib-includes-private',
+			passed: true,
+		});
 	});
 
 	make.add('run-e1', ['package-install'], async (args) => {
