@@ -29,11 +29,10 @@ import {
 	IImportedLibrary,
 	ILinkedCompilation,
 } from './Library.js';
-import { IConfig, readConfigFile } from './Config.js';
+import { readConfigFile } from './Config.js';
 import { mkdir, copyFile, writeFile, cp } from 'node:fs/promises';
 import { chdir, cwd } from 'node:process';
 import { platform } from 'node:os';
-import { readFileSync } from 'node:fs';
 import { PkgConfig } from 'espkg-config';
 import { dirname, resolve } from 'node:path';
 
@@ -162,7 +161,6 @@ export class Distribution {
 
 	private _compiler: ICompiler;
 	private _defaultLibraryType: ResolvedLibraryType = ResolvedLibraryType.static;
-	private _config: IConfig;
 	private _pkgSearchPaths: string[] = [];
 	private _pkg: PkgConfig;
 
