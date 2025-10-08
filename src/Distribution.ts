@@ -29,11 +29,10 @@ import {
 	IImportedLibrary,
 	ILinkedCompilation,
 } from './Library.js';
-import { IConfig, readConfigFile } from './Config.js';
+import { readConfigFile } from './Config.js';
 import { mkdir, copyFile, writeFile, cp } from 'node:fs/promises';
 import { chdir, cwd } from 'node:process';
 import { platform } from 'node:os';
-import { readFileSync } from 'node:fs';
 import { PkgConfig } from 'espkg-config';
 import { dirname, resolve } from 'node:path';
 
@@ -162,7 +161,6 @@ export class Distribution {
 
 	private _compiler: ICompiler;
 	private _defaultLibraryType: ResolvedLibraryType = ResolvedLibraryType.static;
-	private _config: IConfig;
 	private _pkgSearchPaths: string[] = [];
 	private _pkg: PkgConfig;
 
@@ -228,6 +226,8 @@ export class Distribution {
 			includeDirs.push(Path.src('include'));
 		}
 
+		const privateIncludeDirs: Path[] = [Path.src('private/include')];
+
 		const linkTo: Library[] = [];
 		const pkgs: IImportedLibrary[] = [];
 		if (opts.linkTo) {
@@ -264,6 +264,7 @@ export class Distribution {
 			outDir: this.outDir,
 			src: opts.src.map((s) => Path.src(s)),
 			includeDirs,
+			privateIncludeDirs,
 			linkTo,
 			pkgs,
 			compileCommands: this.outDir.join(`.${opts.name}-compile_commands.json`),
@@ -492,7 +493,7 @@ export class Distribution {
 					const { cmake, pkgconfig } = p;
 					if (!cmake) {
 						args.logStream.write(
-							`'${c.name}' depends on a package without a cmake lookup name defined in findPackage (pkgconfig name: '${pkgconfig}')`,
+							`'${c.name}' depends on a package without a cmake lookup name defined in findPackage (pkgconfig name: '${pkgconfig}')\n`,
 						);
 						return false;
 					}
@@ -526,6 +527,14 @@ export class Distribution {
 					args.logStream.write(`Copy ${i} -> ${dest}\n`);
 					await cp(args.abs(i), args.abs(dest), { recursive: true });
 					args.logStream.write(`(done) Copy ${i} -> ${dest}\n`);
+				}
+
+				// Copy all private includes into dist/private/include
+				for (const pi of c.privateIncludeDirs) {
+					const dest = dir.join('private/include');
+					args.logStream.write(`Copy ${pi} -> ${dest}\n`);
+					await cp(args.abs(pi), args.abs(dest), { recursive: true });
+					args.logStream.write(`(done) Copy ${pi} -> ${dest}\n`);
 				}
 			}
 
@@ -569,8 +578,16 @@ export class Distribution {
 				}
 				cmake.push(')');
 
+				// Assumes that all headers are copied into include/
 				if (exe.includeDirs.length > 0) {
 					cmake.push(`target_include_directories(${exe.name} PRIVATE include)`);
+				}
+
+				// Assumes that all private headers are copied into private/include/
+				if (exe.privateIncludeDirs.length > 0) {
+					cmake.push(
+						`target_include_directories(${exe.name} PRIVATE private/include)`,
+					);
 				}
 
 				for (const p of exe.pkgs) {
@@ -588,7 +605,7 @@ export class Distribution {
 			const msvcPkgconfig = pkgconfig.join('msvc');
 
 			if (distLibs.length > 0) {
-				args.logStream.write(`Creating ${msvcPkgconfig}`);
+				args.logStream.write(`Creating ${msvcPkgconfig}\n`);
 				await mkdir(args.abs(msvcPkgconfig), { recursive: true });
 
 				// TODO only if installed
@@ -608,6 +625,12 @@ export class Distribution {
 						'$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>',
 						'$<INSTALL_INTERFACE:include>',
 						')',
+					);
+				}
+
+				if (lib.privateIncludeDirs.length > 0) {
+					cmake.push(
+						`\ntarget_include_directories(${lib.name} PRIVATE private/include)`,
 					);
 				}
 
@@ -659,11 +682,11 @@ export class Distribution {
 				}
 
 				const pcFile = pkgconfig.join(`${lib.name}.pc`);
-				args.logStream.write(`Writing ${pcFile}`);
+				args.logStream.write(`Writing ${pcFile}\n`);
 				await writeFile(args.abs(pcFile), pc.join('\n'), 'utf8');
 
 				const msvcPcFile = msvcPkgconfig.join(`${lib.name}.pc`);
-				args.logStream.write(`Writing ${msvcPcFile}`);
+				args.logStream.write(`Writing ${msvcPcFile}\n`);
 				await writeFile(args.abs(msvcPcFile), msvcPc.join('\r\n'), 'utf8');
 
 				// TODO - only if installed
@@ -703,7 +726,7 @@ export class Distribution {
 				configContents.push(`check_required_components(${lib.name})`);
 
 				const configFile = cmakeDir.join(`${lib.name}-config.cmake.in`);
-				args.logStream.write(`Generating ${configFile}`);
+				args.logStream.write(`Generating ${configFile}\n`);
 				await writeFile(
 					args.abs(configFile),
 					configContents.join('\n'),

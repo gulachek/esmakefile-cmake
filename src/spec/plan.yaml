@@ -24,6 +24,8 @@ plan:
             prose: By default, an executable includes the `@src/include` directory.
           - case: header-is-postreq
             prose: Updating a header file required by a compilation makes an executable require updates.
+          - case: default-private-include
+            prose: By default, the `private/include` directory is available for header lookup.
           - case: links-c-cxx-as-cxx
             prose: When a C and C++ source (detected by extension) is given to addExecutable, the executable is linked with a C++ compiler.
           - case: includes-direct-dependency-dirs
@@ -34,6 +36,10 @@ plan:
             prose: A library created with one `Distribution` can be linked to an executable in another `Distribution`.
       - group: addLibrary
         plan:
+          - case: default-include
+            prose: By default, an executable includes the `@src/include` directory.
+          - case: default-private-include
+            prose: By default, the `private/include` directory is available for header lookup.
           - case: links-c-cxx-as-cxx
             prose: When a C and C++ source (detected by extension) is given to addLibrary, the executable is linked with a C++ compiler.
           - case: can-link-to-other-distribution
@@ -116,6 +122,16 @@ plan:
           `target`.
       - case: test-omitted-from-package
         prose: After creating a package, source provided to `addTest` is not copied to the package.
+      - group: includes
+        plan:
+          - case: exe-includes-private
+            prose: The CMakeLists.txt will include private includes in the compile of an executable.
+          - case: lib-includes-private
+            prose: The CMakeLists.txt will include private includes in the compile of an executable.
+          - case: copies-private
+            prose: Generating a distribution copies private include headers to private/include.
+          - case: skips-install-private
+            prose: A private header is not installed.
       - group: findPackage
         plan:
           - case: can-specify-version

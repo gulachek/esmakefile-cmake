@@ -71,6 +71,10 @@ export class MsvcCompiler implements ICompiler {
 				return `-I${this.make.abs(i)}`;
 			});
 
+			for (const pi of c.privateIncludeDirs) {
+				includeFlags.push(`-I${this.make.abs(pi)}`);
+			}
+
 			// TODO postreqs
 			const { flags: pkgCflags } = await this._pkg.cflags(pkgDeps.names);
 
@@ -98,6 +102,7 @@ export class MsvcCompiler implements ICompiler {
 			await dumpCompileCommands(args.abs(compileCommands), index);
 		});
 
+		// TODO - this isn't used. Is there an issue?
 		const includeFlags: string[] = [];
 		for (const i of c.includeDirs) {
 			includeFlags.push('/I', this.make.abs(i));
