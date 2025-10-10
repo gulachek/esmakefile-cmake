@@ -30,6 +30,9 @@ export interface IConfig {
 
 	/** Flags to pass to C compiler for all C translation units */
 	cflags?: string[];
+
+	/** Flags to pass to C compiler for all C++ translation units */
+	cxxflags?: string[];
 }
 
 // TODO this needs logging to inform user of invalid config /
@@ -62,10 +65,10 @@ export function parseConfig(
 			if (typeof config[p] !== 'boolean') {
 				return false;
 			}
-		} else if (p === 'cflags') {
-			const cflags = config[p];
+		} else if (p === 'cflags' || p === 'cxxflags') {
+			const flags = config[p];
 
-			if (!isStringArray(cflags)) {
+			if (!isStringArray(flags)) {
 				return false;
 			}
 		} else {

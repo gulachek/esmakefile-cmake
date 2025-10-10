@@ -161,6 +161,7 @@ export class Distribution {
 
 	private _compiler: ICompiler;
 	private _cflags: string[] = [];
+	private _cxxflags: string[] = [];
 	private _defaultLibraryType: ResolvedLibraryType = ResolvedLibraryType.static;
 	private _pkgSearchPaths: string[] = [];
 	private _pkg: PkgConfig;
@@ -195,6 +196,7 @@ export class Distribution {
 			cStd: this.cStd,
 			cxxStd: this.cxxStd,
 			cflags: this._cflags,
+			cxxflags: this._cxxflags,
 		};
 
 		if (platform() === 'win32') {
@@ -454,6 +456,10 @@ export class Distribution {
 
 			if (config.cflags) {
 				this._cflags = config.cflags;
+			}
+
+			if (config.cxxflags) {
+				this._cxxflags = config.cxxflags;
 			}
 
 			if (config.addPkgConfigSearchPaths) {

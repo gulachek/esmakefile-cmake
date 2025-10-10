@@ -18,6 +18,8 @@ plan:
         plan:
           - case: cflags
             prose: The "cflags" array in "esmakefile-cmake.config.json" adds compiler flags to C files.
+          - case: cxxflags
+            prose: The "cxxflags" array in "esmakefile-cmake.config.json" adds compiler flags to C++ files.
       - group: addExecutable
         plan:
           - case: source-is-prereq

@@ -1118,20 +1118,38 @@ async function updateTarget(
 
 	await test('dev25', async () => {
 		const fromCflags = join(srcDir, 'from-cflags');
+		const fromCxxflags = join(srcDir, 'from-cxxflags');
 		await mkdir(fromCflags);
+		await mkdir(fromCxxflags);
 
 		await writePath(
 			'esmakefile-cmake.config.json',
 			JSON.stringify({
 				cflags: [`-I${fromCflags}`],
+				cxxflags: [`-I${fromCxxflags}`],
 			}),
 		);
 
 		await writePath('src/from-cflags/zero.h', '#define CFLAGS_ZERO 0');
+		await writePath('src/from-cxxflags/zero.h', '#define CXXFLAGS_ZERO 0');
+
 		await writePath(
-			'src/cflags.c',
-			'#include "zero.h"',
-			'int main() { return CFLAGS_ZERO; }',
+			'src/cz.c',
+			'#include "zero.h"', // from-cflags
+			'int czero() { return CFLAGS_ZERO; }',
+		);
+
+		await writePath(
+			'src/cxxz.cpp',
+			'#include "zero.h"', // from-cxxflags
+			'int cxxzero() { return CXXFLAGS_ZERO; }',
+		);
+
+		await writePath(
+			'src/main.cpp',
+			'extern "C" int czero();',
+			'extern int cxxzero();',
+			'int main() { return czero() + cxxzero(); }',
 		);
 
 		const d = new Distribution(make, {
@@ -1139,13 +1157,13 @@ async function updateTarget(
 			version: '1.2.3',
 		});
 
-		const cflags = d.addExecutable({
+		const main = d.addExecutable({
 			name: 'test',
-			src: ['src/cflags.c'],
+			src: ['src/main.cpp', 'src/cz.c', 'src/cxxz.cpp'],
 		});
 
-		await report('e2e.dev.config.cflags', () =>
-			expectOutput(cflags.binary, ''),
+		await report(['e2e.dev.config.cflags', 'e2e.dev.config.cxxflags'], () =>
+			expectOutput(main.binary, ''),
 		);
 	});
 })();

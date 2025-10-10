@@ -62,7 +62,7 @@ export class MsvcCompiler implements ICompiler {
 		this.cc = 'cl.exe';
 		this.lib = 'lib.exe';
 		this._cflags = args.cflags;
-		this._cxxflags = [];
+		this._cxxflags = args.cxxflags;
 	}
 
 	private _compile(c: ILinkedCompilation, pkgDeps: IPkgDeps): IBuildPath[] {

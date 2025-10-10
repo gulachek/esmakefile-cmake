@@ -67,7 +67,7 @@ export class GccCompiler implements ICompiler {
 		this._cStd = args.cStd;
 		this._cxxStd = args.cxxStd;
 		this._cflags = args.cflags;
-		this._cxxflags = [];
+		this._cxxflags = args.cxxflags;
 
 		if (platform() === 'darwin') {
 			this._dylibExt = '.dylib';
