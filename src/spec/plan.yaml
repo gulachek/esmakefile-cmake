@@ -14,6 +14,10 @@ plan:
             prose: Specifying C++20 makes a development build of a C++ executable target C++20.
           - case: test-target
             prose: A `Distribution` will have a test recipe called 'test-<dist-name>' that runs all tests.
+      - group: config
+        plan:
+          - case: cflags
+            prose: The "cflags" array in "esmakefile-cmake.config.json" adds compiler flags to C files.
       - group: addExecutable
         plan:
           - case: source-is-prereq

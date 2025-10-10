@@ -135,12 +135,17 @@ async function updateTarget(
 
 		const t = new Timer(30000);
 
-		await Promise.race([impl(), t.start()]);
+		try {
+			await Promise.race([impl(), t.start()]);
 
-		if (t.complete) {
-			throw new Error(`Timed out (> ${t.ms} ms)`);
-		} else {
-			t.stop();
+			if (t.complete) {
+				throw new Error(`Timed out (> ${t.ms} ms)`);
+			} else {
+				t.stop();
+			}
+		} catch (ex) {
+			console.error('Test', name, 'failed: ', ex);
+			process.exit(1);
 		}
 
 		chdir(prevDir);
@@ -1046,7 +1051,7 @@ async function updateTarget(
 	});
 
 	// generates a compile_commands.json file
-	await test('compile-commands', async () => {
+	await test('dev24', async () => {
 		await mkdir(pkgconfigDir, { recursive: true });
 
 		const add = Path.src('src/add.c');
@@ -1109,6 +1114,39 @@ async function updateTarget(
 				make.abs(test),
 			]);
 		});
+	});
+
+	await test('dev25', async () => {
+		const fromCflags = join(srcDir, 'from-cflags');
+		await mkdir(fromCflags);
+
+		await writePath(
+			'esmakefile-cmake.config.json',
+			JSON.stringify({
+				cflags: [`-I${fromCflags}`],
+			}),
+		);
+
+		await writePath('src/from-cflags/zero.h', '#define CFLAGS_ZERO 0');
+		await writePath(
+			'src/cflags.c',
+			'#include "zero.h"',
+			'int main() { return CFLAGS_ZERO; }',
+		);
+
+		const d = new Distribution(make, {
+			name: 'test',
+			version: '1.2.3',
+		});
+
+		const cflags = d.addExecutable({
+			name: 'test',
+			src: ['src/cflags.c'],
+		});
+
+		await report('e2e.dev.config.cflags', () =>
+			expectOutput(cflags.binary, ''),
+		);
 	});
 })();
 

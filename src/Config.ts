@@ -17,7 +17,7 @@
  * 02111-1307, USA.
  */
 
-import { resolve, dirname } from 'node:path';
+import { resolve } from 'node:path';
 import { readFileSync } from 'node:fs';
 
 /** Build-time configuration for a Distribution */
@@ -27,6 +27,9 @@ export interface IConfig {
 
 	/** Build shared libraries by default */
 	buildSharedLibs?: boolean;
+
+	/** Flags to pass to C compiler for all C translation units */
+	cflags?: string[];
 }
 
 // TODO this needs logging to inform user of invalid config /
@@ -48,19 +51,21 @@ export function parseConfig(
 		if (p === 'addPkgConfigSearchPaths') {
 			const paths = config[p];
 
-			if (!Array.isArray(paths)) {
+			if (!isStringArray(paths)) {
 				return false;
 			}
 
 			for (let i = 0; i < paths.length; ++i) {
-				if (typeof paths[i] !== 'string') {
-					return false;
-				}
-
 				paths[i] = basePath ? resolve(paths[i], basePath) : resolve(paths[i]);
 			}
 		} else if (p === 'buildSharedLibs') {
 			if (typeof config[p] !== 'boolean') {
+				return false;
+			}
+		} else if (p === 'cflags') {
+			const cflags = config[p];
+
+			if (!isStringArray(cflags)) {
 				return false;
 			}
 		} else {
@@ -102,6 +107,15 @@ function isJsObject(value: unknown): value is Record<string, unknown> {
 
 	if (typeof value.hasOwnProperty !== 'function') {
 		return false;
+	}
+
+	return true;
+}
+
+function isStringArray(value: unknown): value is string[] {
+	if (!Array.isArray(value)) return false;
+	for (const elem of value) {
+		if (!(typeof elem === 'string')) return false;
 	}
 
 	return true;

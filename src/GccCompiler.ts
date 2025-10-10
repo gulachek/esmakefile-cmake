@@ -55,6 +55,8 @@ export class GccCompiler implements ICompiler {
 	private _cStd?: CStandard;
 	private _cxxStd?: CxxStandard;
 	private _commands = new Map<string, CompileCommandIndex>();
+	private _cflags: string[];
+	private _cxxflags: string[];
 
 	constructor(args: ICompilerArgs) {
 		this.make = args.make;
@@ -64,6 +66,8 @@ export class GccCompiler implements ICompiler {
 		this._pkg = args.pkg;
 		this._cStd = args.cStd;
 		this._cxxStd = args.cxxStd;
+		this._cflags = args.cflags;
+		this._cxxflags = [];
 
 		if (platform() === 'darwin') {
 			this._dylibExt = '.dylib';
@@ -99,11 +103,14 @@ export class GccCompiler implements ICompiler {
 				if (fPIC) flags.push('-fPIC');
 
 				let cc: string;
+				let cflags: string[];
 				if (isCxxSrc(s)) {
 					cc = 'clang++';
+					cflags = this._cxxflags;
 					if (this._cxxStd) flags.push(`-std=c++${this._cxxStd}`);
 				} else {
 					cc = 'clang';
+					cflags = this._cflags;
 					if (this._cStd) flags.push(`-std=c${this._cStd}`);
 				}
 
@@ -112,7 +119,14 @@ export class GccCompiler implements ICompiler {
 				index.set(file, {
 					directory,
 					file,
-					arguments: [cc, ...flags, ...includeFlags, ...pkgCflags, args.abs(s)],
+					arguments: [
+						cc,
+						...flags,
+						...includeFlags,
+						...cflags,
+						...pkgCflags,
+						args.abs(s),
+					],
 				});
 			}
 
