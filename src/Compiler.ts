@@ -27,6 +27,8 @@ export interface ICompilerArgs {
 	pkg: PkgConfig;
 	cStd?: CStandard;
 	cxxStd?: CxxStandard;
+	cflags: string[]; // Additional C flags (CMake does C_DEFINES, C_INCLUDES, **C_FLAGS**)
+	cxxflags: string[]; // Additional C++ flags (Same ordering as cflags)
 }
 
 export interface ICompiler {

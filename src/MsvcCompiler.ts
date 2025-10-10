@@ -51,6 +51,8 @@ export class MsvcCompiler implements ICompiler {
 	private _cxxStd?: CxxStandard;
 	private _pkg: PkgConfig;
 	private _commands = new Map<string, CompileCommandIndex>();
+	private _cflags: string[];
+	private _cxxflags: string[];
 
 	constructor(args: ICompilerArgs) {
 		this.make = args.make;
@@ -59,6 +61,8 @@ export class MsvcCompiler implements ICompiler {
 		this._pkg = args.pkg;
 		this.cc = 'cl.exe';
 		this.lib = 'lib.exe';
+		this._cflags = args.cflags;
+		this._cxxflags = args.cxxflags;
 	}
 
 	private _compile(c: ILinkedCompilation, pkgDeps: IPkgDeps): IBuildPath[] {
@@ -80,9 +84,12 @@ export class MsvcCompiler implements ICompiler {
 
 			for (const s of c.src) {
 				const flags = ['/nologo', '/c'];
+				let cflags: string[];
 				if (isCxxSrc(s)) {
+					cflags = this._cxxflags;
 					if (this._cxxStd) flags.push(`/std:c++${this._cxxStd}`);
 				} else {
+					cflags = this._cflags;
 					if (this._cStd) flags.push(`/std:c${this._cStd}`);
 				}
 
@@ -93,7 +100,14 @@ export class MsvcCompiler implements ICompiler {
 				index.set(file, {
 					directory,
 					file,
-					arguments: [cc, ...flags, ...includeFlags, ...pkgCflags, args.abs(s)],
+					arguments: [
+						cc,
+						...flags,
+						...includeFlags,
+						...cflags,
+						...pkgCflags,
+						args.abs(s),
+					],
 				});
 			}
 
@@ -101,12 +115,6 @@ export class MsvcCompiler implements ICompiler {
 			this._commands.set(c.name, index);
 			await dumpCompileCommands(args.abs(compileCommands), index);
 		});
-
-		// TODO - this isn't used. Is there an issue?
-		const includeFlags: string[] = [];
-		for (const i of c.includeDirs) {
-			includeFlags.push('/I', this.make.abs(i));
-		}
 
 		const objs: IBuildPath[] = [];
 
