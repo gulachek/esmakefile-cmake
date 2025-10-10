@@ -116,12 +116,6 @@ export class MsvcCompiler implements ICompiler {
 			await dumpCompileCommands(args.abs(compileCommands), index);
 		});
 
-		// TODO - this isn't used. Is there an issue?
-		const includeFlags: string[] = [];
-		for (const i of c.includeDirs) {
-			includeFlags.push('/I', this.make.abs(i));
-		}
-
 		const objs: IBuildPath[] = [];
 
 		for (const s of c.src) {
