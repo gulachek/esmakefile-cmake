@@ -99,6 +99,7 @@ export interface ILinkedCompilation {
 	privateIncludeDirs: Path[];
 	linkTo: Library[];
 	pkgs: IImportedLibrary[];
+	compileOpts: string[];
 	compileCommands: IBuildPath;
 	// not included in actual distribution
 	devOnly: boolean;

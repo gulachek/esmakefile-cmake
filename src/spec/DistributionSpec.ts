@@ -1119,8 +1119,10 @@ async function updateTarget(
 	await test('dev25', async () => {
 		const fromCflags = join(srcDir, 'from-cflags');
 		const fromCxxflags = join(srcDir, 'from-cxxflags');
+		const fromCompileFlags = join(srcDir, 'from-compile-opts');
 		await mkdir(fromCflags);
 		await mkdir(fromCxxflags);
+		await mkdir(fromCompileFlags);
 
 		await writePath(
 			'esmakefile-cmake.config.json',
@@ -1132,6 +1134,10 @@ async function updateTarget(
 
 		await writePath('src/from-cflags/zero.h', '#define CFLAGS_ZERO 0');
 		await writePath('src/from-cxxflags/zero.h', '#define CXXFLAGS_ZERO 0');
+		await writePath(
+			'src/from-compile-opts/cero.h',
+			'#define COMPILE_OPTS_CERO 0',
+		);
 
 		await writePath(
 			'src/cz.c',
@@ -1146,10 +1152,17 @@ async function updateTarget(
 		);
 
 		await writePath(
+			'src/coptz.c',
+			'#include "cero.h"', // from-compile-opts
+			'int copt_cero() { return COMPILE_OPTS_CERO; }',
+		);
+
+		await writePath(
 			'src/main.cpp',
 			'extern "C" int czero();',
 			'extern int cxxzero();',
-			'int main() { return czero() + cxxzero(); }',
+			'extern "C" int copt_cero();',
+			'int main() { return czero() + cxxzero() + copt_cero(); }',
 		);
 
 		const d = new Distribution(make, {
@@ -1159,11 +1172,17 @@ async function updateTarget(
 
 		const main = d.addExecutable({
 			name: 'test',
-			src: ['src/main.cpp', 'src/cz.c', 'src/cxxz.cpp'],
+			src: ['src/main.cpp', 'src/cz.c', 'src/cxxz.cpp', 'src/coptz.c'],
+			compileOpts: [`-I${fromCompileFlags}`],
 		});
 
-		await report(['e2e.dev.config.cflags', 'e2e.dev.config.cxxflags'], () =>
-			expectOutput(main.binary, ''),
+		await report(
+			[
+				'e2e.dev.config.cflags',
+				'e2e.dev.config.cxxflags',
+				'e2e.dev.addExecutable.compile-opts',
+			],
+			() => expectOutput(main.binary, ''),
 		);
 	});
 })();

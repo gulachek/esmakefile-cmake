@@ -68,6 +68,9 @@ export interface IAddExecutableOpts {
 
 	/** Libraries to link to */
 	linkTo?: (Library | IFindPackageResult)[];
+
+	/** Generic compiler flags */
+	compileOpts?: string[];
 }
 
 /**
@@ -263,6 +266,8 @@ export class Distribution {
 			}
 		}
 
+		const compileOpts = opts.compileOpts || [];
+
 		return {
 			name: opts.name,
 			outDir: this.outDir,
@@ -271,6 +276,7 @@ export class Distribution {
 			privateIncludeDirs,
 			linkTo,
 			pkgs,
+			compileOpts,
 			compileCommands: this.outDir.join(`.${opts.name}-compile_commands.json`),
 			devOnly: false,
 			distName: this.name,

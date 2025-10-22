@@ -83,6 +83,7 @@ export class GccCompiler implements ICompiler {
 		pkgDeps: IPkgDeps,
 	): IBuildPath[] {
 		const compileCommands = c.compileCommands;
+		const copts = c.compileOpts;
 
 		this.make.add(compileCommands, pkgDeps.prereqs, async (args) => {
 			const index: CompileCommandIndex = new Map<string, ICompileCommand>();
@@ -123,6 +124,7 @@ export class GccCompiler implements ICompiler {
 						cc,
 						...flags,
 						...includeFlags,
+						...copts,
 						...cflags,
 						...pkgCflags,
 						args.abs(s),

@@ -40,6 +40,8 @@ plan:
             prose: The symbols from a transitive library in a `Distribution` are linked to an executable.
           - case: can-link-to-other-distribution
             prose: A library created with one `Distribution` can be linked to an executable in another `Distribution`.
+          - case: compile-opts
+            prose: An executable target can have explicit generic compiler flags.
       - group: addLibrary
         plan:
           - case: default-include
