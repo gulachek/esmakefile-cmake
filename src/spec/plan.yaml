@@ -1,4 +1,4 @@
-group: e2e
+group: tst
 plan:
   - group: dev
     plan:

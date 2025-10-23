@@ -71,7 +71,7 @@ Due to the large number of files that are generated, this file
 serves to document the output structure of the `.test`
 directory.
 
-The main `src/spec/e2e.ts` script is run with the current
+The main `src/spec/testMain.ts` script is run with the current
 directory (git repo root) as the `--srcdir` and the `.test`
 directory as the `--outdir`.
 

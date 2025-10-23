@@ -225,17 +225,17 @@ async function updateTarget(
 
 		await report(
 			[
-				'e2e.dev.addExecutable.source-is-prereq',
-				'e2e.dev.addExecutable.multi-source',
-				'e2e.dev.addExecutable.default-include',
-				'e2e.dev.addExecutable.default-private-include',
+				'tst.dev.addExecutable.source-is-prereq',
+				'tst.dev.addExecutable.multi-source',
+				'tst.dev.addExecutable.default-include',
+				'tst.dev.addExecutable.default-private-include',
 			],
 			() => expectOutput(hello.binary, 'hello!'),
 		);
 
 		await writePath('include/punct.h', "#define PUNCT '?'");
 
-		await report(['e2e.dev.addExecutable.header-is-postreq'], () =>
+		await report(['tst.dev.addExecutable.header-is-postreq'], () =>
 			expectOutput(hello.binary, 'hello?'),
 		);
 	});
@@ -263,7 +263,7 @@ async function updateTarget(
 			src: ['src/main.c', 'src/hello.cpp'],
 		});
 
-		await report('e2e.dev.addExecutable.links-c-cxx-as-cxx', () =>
+		await report('tst.dev.addExecutable.links-c-cxx-as-cxx', () =>
 			expectOutput(hello.binary, 'hello!'),
 		);
 	});
@@ -306,7 +306,7 @@ async function updateTarget(
 			linkTo: [nums],
 		});
 
-		await report('e2e.dev.addLibrary.links-c-cxx-as-cxx', () =>
+		await report('tst.dev.addLibrary.links-c-cxx-as-cxx', () =>
 			expectOutput(main.binary, '2'),
 		);
 	});
@@ -332,7 +332,7 @@ async function updateTarget(
 			src: ['src/printv.c'],
 		});
 
-		await report('e2e.dev.Distribution.c11-exe', () =>
+		await report('tst.dev.Distribution.c11-exe', () =>
 			expectOutput(t.binary, '201112'),
 		);
 	});
@@ -358,7 +358,7 @@ async function updateTarget(
 			src: ['src/printv.c'],
 		});
 
-		await report('e2e.dev.Distribution.c17-exe', () =>
+		await report('tst.dev.Distribution.c17-exe', () =>
 			expectOutput(t.binary, '201710'),
 		);
 	});
@@ -385,7 +385,7 @@ async function updateTarget(
 			src: ['src/printv.cpp'],
 		});
 
-		await report('e2e.dev.Distribution.cxx17-exe', () =>
+		await report('tst.dev.Distribution.cxx17-exe', () =>
 			expectOutput(t.binary, '201703'),
 		);
 	});
@@ -412,7 +412,7 @@ async function updateTarget(
 			src: ['src/printv.cpp'],
 		});
 
-		await report('e2e.dev.Distribution.cxx20-exe', () =>
+		await report('tst.dev.Distribution.cxx20-exe', () =>
 			expectOutput(t.binary, '202002'),
 		);
 	});
@@ -471,10 +471,10 @@ async function updateTarget(
 
 		await report(
 			[
-				'e2e.dev.addLibrary.default-include',
-				'e2e.dev.addLibrary.default-private-include',
-				'e2e.dev.addExecutable.links-transitive-library',
-				'e2e.dev.addExecutable.includes-direct-dependency-dirs',
+				'tst.dev.addLibrary.default-include',
+				'tst.dev.addLibrary.default-private-include',
+				'tst.dev.addExecutable.links-transitive-library',
+				'tst.dev.addExecutable.includes-direct-dependency-dirs',
 			],
 			() => expectOutput(test.binary, '4'),
 		);
@@ -555,8 +555,8 @@ async function updateTarget(
 
 		await report(
 			[
-				'e2e.dev.findPackage.searches-pkgconfig-by-name',
-				'e2e.dev.findPackage.can-link-to-exe',
+				'tst.dev.findPackage.searches-pkgconfig-by-name',
+				'tst.dev.findPackage.can-link-to-exe',
 			],
 			() => expectOutput(test.binary, '2+2=4'),
 		);
@@ -580,7 +580,7 @@ async function updateTarget(
 			linkTo: [addPkg],
 		});
 
-		await report('e2e.dev.findPackage.can-specify-version', () =>
+		await report('tst.dev.findPackage.can-specify-version', () =>
 			expectOutput(test.binary, '2+2=4'),
 		);
 	});
@@ -605,7 +605,7 @@ async function updateTarget(
 
 		const { result } = await experimental.updateTarget(make, test.binary);
 
-		await report('e2e.dev.findPackage.fails-incompatible-version', () => {
+		await report('tst.dev.findPackage.fails-incompatible-version', () => {
 			expect(result).to.be.false;
 		});
 	});
@@ -630,7 +630,7 @@ async function updateTarget(
 		});
 
 		await report(
-			['e2e.dev.findPackage.can-specify-explicit-pkgconfig-name'],
+			['tst.dev.findPackage.can-specify-explicit-pkgconfig-name'],
 			() => expectOutput(test.binary, '2+2=4'),
 		);
 	});
@@ -685,7 +685,7 @@ async function updateTarget(
 			linkTo: [mul],
 		});
 
-		await report('e2e.dev.findPackage.can-link-to-lib', () =>
+		await report('tst.dev.findPackage.can-link-to-lib', () =>
 			expectOutput(test.binary, '2*3=6'),
 		);
 	});
@@ -724,7 +724,7 @@ async function updateTarget(
 		const re = /^find_package\(add\s+2.3.4\s+REQUIRED\)$/;
 		const l = lines.find((l) => l.match(re));
 
-		await report('e2e.dist.findPackage.can-specify-version', () => {
+		await report('tst.dist.findPackage.can-specify-version', () => {
 			expect(l, 'Did not find match').not.to.be.empty;
 		});
 	});
@@ -784,8 +784,8 @@ async function updateTarget(
 
 		await report(
 			[
-				'e2e.dev.addLibrary.can-link-to-other-distribution',
-				'e2e.dev.addExecutable.can-link-to-other-distribution',
+				'tst.dev.addLibrary.can-link-to-other-distribution',
+				'tst.dev.addExecutable.can-link-to-other-distribution',
 			],
 			() => expectOutput(main.binary, 'b'),
 		);
@@ -820,18 +820,18 @@ async function updateTarget(
 			linkTo: [add],
 		});
 
-		await report('e2e.dev.addTest.returns-obj-with-run', async () => {
+		await report('tst.dev.addTest.returns-obj-with-run', async () => {
 			await updateTarget(make, run);
 		});
 
-		await report('e2e.dev.addTest.returns-obj-with-binary', () =>
+		await report('tst.dev.addTest.returns-obj-with-binary', () =>
 			expectOutput(binary, ''),
 		);
 
 		// also make sure test-add rule works
 		await rm(buildDir, { recursive: true });
 
-		await report('e2e.dev.Distribution.test-target', async () => {
+		await report('tst.dev.Distribution.test-target', async () => {
 			expect(d.test.rel()).to.equal('test-add');
 			await updateTarget(make, 'test-add');
 		});
@@ -905,7 +905,7 @@ async function updateTarget(
 			linkTo: [img],
 		});
 
-		await report('e2e.dev.addLibrary.type-static-implicit-default', () =>
+		await report('tst.dev.addLibrary.type-static-implicit-default', () =>
 			expectOutput(test.binary, make.abs(test.binary)),
 		);
 	});
@@ -930,7 +930,7 @@ async function updateTarget(
 			linkTo: [img],
 		});
 
-		await report('e2e.dev.addLibrary.type-static-explicit-default', () =>
+		await report('tst.dev.addLibrary.type-static-explicit-default', () =>
 			expectOutput(test.binary, make.abs(test.binary)),
 		);
 	});
@@ -955,7 +955,7 @@ async function updateTarget(
 			linkTo: [img],
 		});
 
-		await report('e2e.dev.addLibrary.type-explicit-static', () =>
+		await report('tst.dev.addLibrary.type-explicit-static', () =>
 			expectOutput(test.binary, make.abs(test.binary)),
 		);
 	});
@@ -980,7 +980,7 @@ async function updateTarget(
 			linkTo: [img],
 		});
 
-		await report('e2e.dev.addLibrary.type-explicit-dynamic', () =>
+		await report('tst.dev.addLibrary.type-explicit-dynamic', () =>
 			expectOutput(test.binary, make.abs(img.binary)),
 		);
 	});
@@ -1012,7 +1012,7 @@ async function updateTarget(
 		});
 
 		await report(
-			'e2e.dev.addLibrary.type-config-dynamic-implicit-default',
+			'tst.dev.addLibrary.type-config-dynamic-implicit-default',
 			() => expectOutput(test.binary, make.abs(img.binary)),
 		);
 	});
@@ -1045,7 +1045,7 @@ async function updateTarget(
 		});
 
 		await report(
-			'e2e.dev.addLibrary.type-config-dynamic-explicit-default',
+			'tst.dev.addLibrary.type-config-dynamic-explicit-default',
 			() => expectOutput(test.binary, make.abs(img.binary)),
 		);
 	});
@@ -1101,7 +1101,7 @@ async function updateTarget(
 
 		await updateTarget(make, commands);
 
-		await report('e2e.dev.addCompileCommands.generates-json-db', async () => {
+		await report('tst.dev.addCompileCommands.generates-json-db', async () => {
 			const clangCheck = process.env['CLANG_CHECK'];
 			expect(
 				clangCheck,
@@ -1178,9 +1178,9 @@ async function updateTarget(
 
 		await report(
 			[
-				'e2e.dev.config.cflags',
-				'e2e.dev.config.cxxflags',
-				'e2e.dev.addExecutable.compile-opts',
+				'tst.dev.config.cflags',
+				'tst.dev.config.cxxflags',
+				'tst.dev.addExecutable.compile-opts',
 			],
 			() => expectOutput(main.binary, ''),
 		);

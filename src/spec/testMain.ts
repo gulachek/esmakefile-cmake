@@ -305,7 +305,7 @@ cli((make) => {
 
 		const list = await spawnAsync('tar', ['tzf', args.abs(aTarball)]);
 		allResults.push({
-			id: 'e2e.dist.test-omitted-from-package',
+			id: 'tst.dist.test-omitted-from-package',
 			passed: list.indexOf('t1.c') === -1,
 		});
 
@@ -314,19 +314,19 @@ cli((make) => {
 			'utf8',
 		);
 		allResults.push({
-			id: 'e2e.dist.copies-license',
+			id: 'tst.dist.copies-license',
 			passed: licenseTxt.indexOf("Fake license for 'a'") >= 0,
 		});
 
 		const e1Src = await readFile(args.abs(aPkg.join('src/e1.c')), 'utf8');
 		allResults.push({
-			id: 'e2e.dist.copies-exe-static-src',
+			id: 'tst.dist.copies-exe-static-src',
 			passed: !!e1Src,
 		});
 
 		const genSrc = await readFile(args.abs(aPkg.join('src/gen.c')), 'utf8');
 		allResults.push({
-			id: 'e2e.dist.copies-exe-generated-src',
+			id: 'tst.dist.copies-exe-generated-src',
 			passed: !!genSrc,
 		});
 
@@ -359,7 +359,7 @@ cli((make) => {
 		// We know that /.../a/private/include/secret.h is a private
 		// header
 		allResults.push({
-			id: 'e2e.dist.includes.skips-install-private',
+			id: 'tst.dist.includes.skips-install-private',
 			passed: !(
 				existsSync(join(vAbs, 'include', 'secret.h')) ||
 				existsSync(join(vAbs, 'include', 'private', 'secret.h'))
@@ -369,7 +369,7 @@ cli((make) => {
 		// We know that a.c included secret.h, so if it succeeded
 		// building, then it was included
 		allResults.push({
-			id: 'e2e.dist.includes.lib-includes-private',
+			id: 'tst.dist.includes.lib-includes-private',
 			passed: true,
 		});
 	});
@@ -395,7 +395,7 @@ cli((make) => {
 		if (!success) return false;
 
 		const results = await runTestExe(args.abs(d1Esmake), []);
-		results.push({ id: 'e2e.pc-pkg.name', passed: true });
+		results.push({ id: 'tst.pc-pkg.name', passed: true });
 		allResults.push(...results);
 	});
 
@@ -411,7 +411,7 @@ cli((make) => {
 		await cmake.build(buildDir, { config: 'Release' });
 
 		const results = await runTestExe(args.abs(d1Cmake), []);
-		results.push({ id: 'e2e.cm-pkg.name', passed: true });
+		results.push({ id: 'tst.cm-pkg.name', passed: true });
 		allResults.push(...results);
 	});
 
