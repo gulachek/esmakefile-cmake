@@ -69,7 +69,7 @@ meaning that users will not need to install your development tools to
 generate the same source. They just need a compiler and CMake, which if
 they're already developing C/C++, is almost a given.
 
-For more detailed information, see `src/spec/DistributionSpec.ts` and
+For more detailed information, see `src/spec/devSpec.ts` and
 `src/index.ts` along with the exported classes and their documentation
 for more specifics. Eventually, there should be stronger documentation
 than this, but this will have to do until that happens.

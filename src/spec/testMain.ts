@@ -261,15 +261,13 @@ cli((make) => {
 		await rm(make.buildRoot, { recursive: true });
 	});
 
-	make.add('distribution-spec', ['install-upstream', 'reset'], async (args) => {
-		const results = await runTestExe(nodeExe, [
-			'dist/spec/DistributionSpec.js',
-		]);
+	make.add('dev-spec', ['install-upstream', 'reset'], async (args) => {
+		const results = await runTestExe(nodeExe, ['dist/spec/devSpec.js']);
 		allResults.push(...results);
 		args.logStream.write(`Num results: ${results.length}`);
 	});
 
-	make.add('dev', ['distribution-spec'], () => {});
+	make.add('dev', ['dev-spec'], () => {});
 
 	make.add(esmakefileCmakeConfig, ['reset'], (args) => {
 		return writeFile(
@@ -415,40 +413,36 @@ cli((make) => {
 		allResults.push(...results);
 	});
 
-	make.add(
-		'pkg',
-		[d1Esmake, d1Cmake, 'run-e1', 'distribution-spec'],
-		(args) => {
-			let allPassed = true;
-			const missedCases = new Set<string>();
-			for (const [id, _] of plan) {
-				missedCases.add(id);
-			}
+	make.add('pkg', [d1Esmake, d1Cmake, 'run-e1', 'dev-spec'], (args) => {
+		let allPassed = true;
+		const missedCases = new Set<string>();
+		for (const [id, _] of plan) {
+			missedCases.add(id);
+		}
 
-			for (const r of allResults) {
-				const { id, passed } = r;
-				missedCases.delete(id);
+		for (const r of allResults) {
+			const { id, passed } = r;
+			missedCases.delete(id);
 
-				if (!passed) {
-					allPassed = false;
-				}
-
-				if (!plan.has(id)) {
-					allPassed = false;
-					args.logStream.write(`Unplanned test case in results: ${id}\n`);
-				}
-
-				args.logStream.write(`${id} = ${passed ? 'pass' : 'fail'}\n`);
-			}
-
-			if (missedCases.size > 0) {
+			if (!passed) {
 				allPassed = false;
-				args.logStream.write(
-					`Planned test cases had no results: ${Array.from(missedCases).join(', ')}\n`,
-				);
 			}
 
-			return allPassed;
-		},
-	);
+			if (!plan.has(id)) {
+				allPassed = false;
+				args.logStream.write(`Unplanned test case in results: ${id}\n`);
+			}
+
+			args.logStream.write(`${id} = ${passed ? 'pass' : 'fail'}\n`);
+		}
+
+		if (missedCases.size > 0) {
+			allPassed = false;
+			args.logStream.write(
+				`Planned test cases had no results: ${Array.from(missedCases).join(', ')}\n`,
+			);
+		}
+
+		return allPassed;
+	});
 });

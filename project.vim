@@ -4,7 +4,7 @@ set path+=.github/**
 set path+=vim/**
 
 nnoremap <Leader>b :!npm run build<CR>
-nnoremap <Leader>d :!npx mocha --inspect-brk -- dist/spec/DistributionSpec.js<CR>
+nnoremap <Leader>d :!npx mocha --inspect-brk -- dist/spec/devSpec.js<CR>
 
 nnoremap <Leader>t :!npm test<CR>
 nnoremap <Leader>g :!node dist/spec/testMain.js --outdir .test pkg<CR>

@@ -22,7 +22,7 @@ outlined below.
 
 These tests _only_ apply to the development time build system,
 which should be a small bit of functionality. The test code
-currently resides in `src/spec/DistributionSpec.ts`.
+currently resides in `src/spec/devSpec.ts`.
 
 The functionality that should go here is
 
@@ -51,7 +51,7 @@ which libraries to link, etc.
 These tests require that the upstream packages are installed on
 the system.
 
-The tests currently live in `src/spec/DistributionSpec.ts`.
+The tests currently live in `src/spec/devSpec.ts`.
 
 > **TODO**: This should be reorganized (issue 30).
 
@@ -61,7 +61,7 @@ The packages we generated must be usable from esmakefile-cmake
 and CMake, so these tests have both an esmakefile-cmake build
 and a `CMakeLists.txt` file to test downstream consumption.
 
-These tests currently live in `src/spec/DistributionSpec.ts`.
+These tests currently live in `src/spec/devSpec.ts`.
 
 > **TODO**: This should be reorganized (issue 30).
 
