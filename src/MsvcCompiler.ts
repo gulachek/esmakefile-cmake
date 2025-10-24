@@ -159,6 +159,7 @@ export class MsvcCompiler implements ICompiler {
 
 		const targets: IBuildPath[] = [path];
 		const flags: string[] = ['/nologo'];
+		const linkOpts = c.linkOpts;
 
 		if (importPath) {
 			targets.push(importPath);
@@ -180,6 +181,7 @@ export class MsvcCompiler implements ICompiler {
 					`/Fe${args.abs(path)}`,
 					...objsAbs,
 					...pkgLibs,
+					...linkOpts,
 				]);
 			},
 		);
