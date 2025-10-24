@@ -144,6 +144,8 @@ plan:
         plan:
           - case: can-specify-version
             prose: A version given to `findPackage` can specify a CMake version.
+      - case: quotes-cmake-args
+        prose: Arguments passed to CMake functions are properly quoted.
   - group: cm-pkg
     plan:
       - case: name
