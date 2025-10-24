@@ -67,6 +67,7 @@ export class MsvcCompiler implements ICompiler {
 
 	private _compile(c: ILinkedCompilation, pkgDeps: IPkgDeps): IBuildPath[] {
 		const compileCommands = c.compileCommands;
+		const copts = c.compileOpts;
 
 		this.make.add(compileCommands, pkgDeps.prereqs, async (args) => {
 			const index: CompileCommandIndex = new Map<string, ICompileCommand>();
@@ -104,6 +105,7 @@ export class MsvcCompiler implements ICompiler {
 						cc,
 						...flags,
 						...includeFlags,
+						...copts,
 						...cflags,
 						...pkgCflags,
 						args.abs(s),
