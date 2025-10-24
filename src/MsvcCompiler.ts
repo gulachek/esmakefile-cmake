@@ -176,12 +176,14 @@ export class MsvcCompiler implements ICompiler {
 					static: true,
 				});
 
+				const link = linkOpts.length > 0 ? ['/link', ...linkOpts] : [];
+
 				return args.spawn(this.cc, [
 					...flags,
 					`/Fe${args.abs(path)}`,
 					...objsAbs,
 					...pkgLibs,
-					...linkOpts,
+					...link,
 				]);
 			},
 		);

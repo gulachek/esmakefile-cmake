@@ -143,7 +143,11 @@ function spawnAsync(exe: string, args?: string[]): Promise<string> {
 		const outChunks: Buffer[] = [];
 		const errChunks: Buffer[] = [];
 
-		child.stdout.on('data', (chunk) => outChunks.push(Buffer.from(chunk)));
+		child.stdout.on('data', (chunk) => {
+			const buf = Buffer.from(chunk);
+			outChunks.push(buf);
+			errChunks.push(buf);
+		});
 		child.stderr.on('data', (chunk) => errChunks.push(Buffer.from(chunk)));
 
 		child.on('error', reject);

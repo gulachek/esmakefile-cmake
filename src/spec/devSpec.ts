@@ -1203,7 +1203,7 @@ async function updateTarget(
 				linkOpts.push('-Wl,-e,_silly_main');
 				break;
 			case 'linux':
-				linkOpts.push('-Wl,-e,silly_main');
+				linkOpts.push('-Wl,--entry=silly_main');
 				break;
 			default:
 				throw new Error('Unsupported platform for devSpec ' + platform());
