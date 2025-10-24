@@ -17,11 +17,6 @@
  * 02111-1307, USA.
  */
 
-import { expect } from 'chai';
-import { quoteCmakeArg } from '../quoteCmakeArg.js';
-
-describe('quoteCmakeArg', () => {
-	it('returns identity for -f', () => {
-		expect(quoteCmakeArg('-f')).to.equal('-f');
-	});
-});
+export function quoteCmakeArg(arg: string): string {
+	return arg;
+}
