@@ -20,6 +20,7 @@
 import { Distribution } from '../../../index.js';
 import { cli, Path } from 'esmakefile';
 import { writeFile } from 'node:fs/promises';
+import { platform } from 'node:os';
 
 cli((make) => {
 	const d = new Distribution(make, {
@@ -57,10 +58,19 @@ cli((make) => {
 		return writeFile(args.abs(genC), 'int gen12() { return 12; }');
 	});
 
+	const copts = [];
+	// HACK this is assuming always MSVC on Windows
+	if (platform() === 'win32') {
+		copts.push('/D', 'MY_COMPILE_OPT=1');
+	} else {
+		copts.push('-DMY_COMPILE_OPT=1');
+	}
+
 	d.addExecutable({
 		name: 'e1',
 		src: ['src/e1.c', genC],
 		linkTo: [zero, one, two, hello],
+		compileOpts: copts,
 	});
 
 	d.addTest({

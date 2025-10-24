@@ -52,5 +52,7 @@ int main() {
    */
   printf("tst.dist.findPackage-explicit-cmake-component = %d\n",
          strcmp(hello(), "hello") == 0);
+
+  printf("tst.dist.exe-install-uses-compile-opts = %d\n", MY_COMPILE_OPT);
   return 0;
 }

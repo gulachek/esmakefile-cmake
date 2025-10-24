@@ -35,6 +35,7 @@ import { chdir, cwd } from 'node:process';
 import { platform } from 'node:os';
 import { PkgConfig } from 'espkg-config';
 import { dirname, resolve } from 'node:path';
+import { quoteCmakeArg } from './quoteCmakeArg.js';
 
 /**
  * Options to create a Distribution
@@ -769,6 +770,14 @@ export class Distribution {
 					`DESTINATION "\${${configDirVar}}"`,
 					')',
 				);
+			}
+
+			// Add compile options
+			for (const t of targets) {
+				if (t.compileOpts.length > 0) {
+					const args = t.compileOpts.map((o) => quoteCmakeArg(o)).join(' ');
+					cmake.push(`target_compile_options(${t.name} PRIVATE ${args})`);
+				}
 			}
 
 			cmake.push('');
