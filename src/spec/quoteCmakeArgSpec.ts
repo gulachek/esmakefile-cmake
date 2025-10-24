@@ -24,4 +24,44 @@ describe('quoteCmakeArg', () => {
 	it('returns identity for -f', () => {
 		expect(quoteCmakeArg('-f')).to.equal('-f');
 	});
+
+	it('quotes a space', () => {
+		expect(quoteCmakeArg('single arg')).to.equal('"single arg"');
+	});
+
+	it('quotes a #', () => {
+		expect(quoteCmakeArg('single#arg')).to.equal('"single#arg"');
+	});
+
+	it('quotes parens', () => {
+		expect(quoteCmakeArg('single()arg')).to.equal('"single()arg"');
+	});
+
+	it('escapes a semicolon', () => {
+		expect(quoteCmakeArg('single;arg')).to.equal('"single\\;arg"');
+	});
+
+	it('escapes a double quote', () => {
+		expect(quoteCmakeArg('single"arg')).to.equal('"single\\"arg"');
+	});
+
+	it('escapes a backslash', () => {
+		expect(quoteCmakeArg('single\\arg')).to.equal('"single\\\\arg"');
+	});
+
+	it('escapes a tab', () => {
+		expect(quoteCmakeArg('single\targ')).to.equal('"single\\targ"');
+	});
+
+	it('escapes a newline', () => {
+		expect(quoteCmakeArg('single\narg')).to.equal('"single\\narg"');
+	});
+
+	it('escapes a carriage return', () => {
+		expect(quoteCmakeArg('single\rarg')).to.equal('"single\\rarg"');
+	});
+
+	it('escapes a variable reference', () => {
+		expect(quoteCmakeArg('${single_arg}')).to.equal('"\\${single_arg}"');
+	});
 });

@@ -18,5 +18,18 @@
  */
 
 export function quoteCmakeArg(arg: string): string {
-	return arg;
+	// https://cmake.org/cmake/help/latest/manual/cmake-language.7.html#unquoted-argument
+	const needsQuoting = /[\s$;#"\\)(]/;
+	if (!needsQuoting.test(arg)) return arg;
+
+	// https://cmake.org/cmake/help/latest/manual/cmake-language.7.html#quoted-argument
+	arg = arg.replaceAll('\\', '\\\\');
+	arg = arg.replaceAll('\t', '\\t');
+	arg = arg.replaceAll('\n', '\\n');
+	arg = arg.replaceAll('\r', '\\r');
+	arg = arg.replaceAll('$', '\\$');
+	arg = arg.replaceAll(';', '\\;');
+	arg = arg.replaceAll('"', '\\"');
+
+	return `"${arg}"`;
 }
