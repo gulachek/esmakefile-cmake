@@ -72,6 +72,9 @@ export interface IAddExecutableOpts {
 
 	/** Generic compiler flags */
 	compileOpts?: string[];
+
+	/** Generic linker flags */
+	linkOpts?: string[];
 }
 
 /**
@@ -268,6 +271,7 @@ export class Distribution {
 		}
 
 		const compileOpts = opts.compileOpts || [];
+		const linkOpts = opts.linkOpts || [];
 
 		return {
 			name: opts.name,
@@ -278,6 +282,7 @@ export class Distribution {
 			linkTo,
 			pkgs,
 			compileOpts,
+			linkOpts,
 			compileCommands: this.outDir.join(`.${opts.name}-compile_commands.json`),
 			devOnly: false,
 			distName: this.name,

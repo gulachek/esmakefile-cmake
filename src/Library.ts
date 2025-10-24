@@ -100,6 +100,7 @@ export interface ILinkedCompilation {
 	linkTo: Library[];
 	pkgs: IImportedLibrary[];
 	compileOpts: string[];
+	linkOpts: string[];
 	compileCommands: IBuildPath;
 	// not included in actual distribution
 	devOnly: boolean;

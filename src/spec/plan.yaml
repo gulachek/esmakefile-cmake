@@ -42,6 +42,8 @@ plan:
             prose: A library created with one `Distribution` can be linked to an executable in another `Distribution`.
           - case: compile-opts
             prose: An executable target can have explicit generic compiler flags.
+          - case: link-opts
+            prose: An executable target can have explicit generic linker flags.
       - group: addLibrary
         plan:
           - case: default-include

@@ -198,6 +198,7 @@ export class GccCompiler implements ICompiler {
 		pkgDeps: IPkgDeps,
 	): void {
 		const libs = allLibs(c);
+		const linkOpts = c.linkOpts;
 
 		this.make.add(
 			path,
@@ -229,6 +230,7 @@ export class GccCompiler implements ICompiler {
 					args.abs(path),
 					...objsAbs,
 					...pkgLibs,
+					...linkOpts,
 				]);
 			},
 		);

@@ -1185,6 +1185,40 @@ async function updateTarget(
 			() => expectOutput(main.binary, ''),
 		);
 	});
+
+	await test('dev26', async () => {
+		await writePath('src/main.c', 'int silly_main() { return 0; }');
+
+		const d = new Distribution(make, {
+			name: 'test',
+			version: '1.2.3',
+		});
+
+		const linkOpts = [];
+		switch (platform()) {
+			case 'win32':
+				linkOpts.push('/ENTRY:silly_main');
+				break;
+			case 'darwin':
+				linkOpts.push('-Wl,-e,_silly_main');
+				break;
+			case 'linux':
+				linkOpts.push('-Wl,-e,silly_main');
+				break;
+			default:
+				throw new Error('Unsupported platform for devSpec ' + platform());
+		}
+
+		const main = d.addExecutable({
+			name: 'test',
+			src: ['src/main.c'],
+			linkOpts,
+		});
+
+		await report(['tst.dev.addExecutable.link-opts'], () =>
+			expectOutput(main.binary, ''),
+		);
+	});
 })();
 
 /** Defines CXXLANG macro from __cplusplus or _MSVC_LANG */
