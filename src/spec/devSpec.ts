@@ -26,13 +26,16 @@ import {
 	BuildPathLike,
 	IBuildPath,
 } from 'esmakefile';
-import { mkdir, rm, writeFile, readFile } from 'node:fs/promises';
-import { join, resolve } from 'node:path';
+import { mkdir, rm, writeFile, readFile, cp } from 'node:fs/promises';
+import { join, resolve, dirname } from 'node:path';
 import { platform } from 'node:os';
 import { spawnSync } from 'node:child_process';
 import { chdir, cwd } from 'node:process';
 import { run } from './run.js';
 
+const distSpecDir = import.meta.dirname;
+const distDir = dirname(distSpecDir);
+const gitDir = dirname(distDir);
 const globalTestDir = join(resolve('.test'), 'dev');
 
 class Timer {
@@ -1187,23 +1190,39 @@ async function updateTarget(
 	});
 
 	await test('dev26', async () => {
-		await writePath('src/main.c', 'int silly_main() { return 0; }');
+		await writePath(
+			'src/main.c',
+			'#include <stddef.h>',
+			'extern int mkuuid(char *, size_t);',
+			'int main() {',
+			' char uuid[37];',
+			' mkuuid(uuid, 37);',
+			' return 0;',
+			'}',
+		);
+		await cp(
+			join(gitDir, 'src/spec/pkg/a/src/mkuuid.c'),
+			make.abs(Path.src('src/mkuuid.c')),
+		);
 
 		const d = new Distribution(make, {
 			name: 'test',
 			version: '1.2.3',
 		});
 
+		const compileOpts = [];
 		const linkOpts = [];
 		switch (platform()) {
 			case 'win32':
-				linkOpts.push('/ENTRY:silly_main');
+				linkOpts.push('Rpcrt4.lib');
 				break;
 			case 'darwin':
-				linkOpts.push('-Wl,-e,_silly_main');
+				compileOpts.push('-framework', 'CoreFoundation');
+				linkOpts.push('-framework', 'CoreFoundation');
 				break;
 			case 'linux':
-				linkOpts.push('-Wl,--entry=silly_main');
+				//compileOpts.push('-I/usr/include/linux');
+				linkOpts.push('-luuid');
 				break;
 			default:
 				throw new Error('Unsupported platform for devSpec ' + platform());
@@ -1211,7 +1230,8 @@ async function updateTarget(
 
 		const main = d.addExecutable({
 			name: 'test',
-			src: ['src/main.c'],
+			src: ['src/main.c', 'src/mkuuid.c'],
+			compileOpts,
 			linkOpts,
 		});
 

@@ -82,4 +82,29 @@ cli((make) => {
 		name: 'a',
 		src: ['src/a.c'],
 	});
+
+	const linkOpts: string[] = [];
+	const compileOpts: string[] = [];
+
+	switch (platform()) {
+		case 'win32':
+			linkOpts.push('Rpcrt4.lib');
+			break;
+		case 'darwin':
+			compileOpts.push('-framework', 'CoreFoundation');
+			linkOpts.push('-framework', 'CoreFoundation');
+			break;
+		case 'linux':
+			linkOpts.push('-luuid');
+			break;
+		default:
+			throw new Error('Unsupported platform!');
+	}
+
+	d.addLibrary({
+		name: 'mkuuid',
+		src: ['src/mkuuid.c'],
+		compileOpts,
+		linkOpts,
+	});
 });
