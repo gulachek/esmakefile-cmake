@@ -85,7 +85,7 @@ export class MsvcCompiler implements ICompiler {
 			const { flags: pkgCflags } = await this._pkg.cflags(pkgDeps.names);
 
 			for (const s of c.src) {
-				const flags = ['/nologo', '/c'];
+				const flags = ['/nologo', '/c', '/MDd'];
 				let cflags: string[];
 				if (isCxxSrc(s)) {
 					cflags = this._cxxflags;
