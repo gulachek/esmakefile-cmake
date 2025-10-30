@@ -24,4 +24,18 @@ describe('quoteShellArg', () => {
 	it('puts single quotes around a simple option', () => {
 		expect(quoteShellArg('-f')).to.equal("'-f'");
 	});
+
+	it('escapes a single quote', () => {
+		expect(quoteShellArg("-d' '")).to.equal("'-d'\\'' '\\'''");
+	});
+
+	it('does not touch typical escape sequences since single quoted', () => {
+		expect(quoteShellArg('hello\\nworld')).to.equal("'hello\\nworld'");
+	});
+
+	// potential issue with newlines in pkg-config file, but this is a really
+	// odd use case. Don't really care right now about attempting to implement
+	// since it doesn't seem like pkg-config really supports newlines embedded
+	// in flags. Would need some really deep investigation to prove that wrong
+	// but doesn't seem worth doing at the moment.
 });

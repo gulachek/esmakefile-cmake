@@ -18,5 +18,6 @@
  */
 
 export function quoteShellArg(arg: string): string {
+	arg = arg.replaceAll("'", "'\\''");
 	return `'${arg}'`;
 }
