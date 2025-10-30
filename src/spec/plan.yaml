@@ -150,7 +150,11 @@ plan:
         prose: Arguments passed to CMake functions are properly quoted.
       - case: exe-install-uses-compile-opts
         prose: >-
-          An executable with `compileOpts` will use those options via `target_compile_opts`
+          An executable with `compileOpts` will use those options via `target_compile_options`
+          in the CMake distribution.
+      - case: exe-install-uses-link-opts
+        prose: >-
+          An executable with `linkOpts` will use those options via `target_link_options`
           in the CMake distribution.
   - group: cm-pkg
     plan:

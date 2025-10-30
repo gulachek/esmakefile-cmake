@@ -12,6 +12,33 @@
 #define SECRET_FOUND 0
 #endif
 
+#if defined(_WIN32)
+#include <rpc.h>
+void call_sys() {
+  UUID uuid;
+  UuidCreate(&uuid);
+  printf("tst.dist.exe-install-uses-link-opts = 1\n");
+}
+#elif defined(__APPLE__)
+#include <CoreFoundation/CoreFoundation.h>
+void call_sys() {
+  CFUUIDRef uuid = CFUUIDCreate(NULL);
+  if (!uuid)
+    return;
+
+  CFRelease(uuid);
+  printf("tst.dist.exe-install-uses-link-opts = 1\n");
+}
+#elif defined(__linux__)
+#include <dlfcn.h>
+void call_sys() {
+  dlopen("/does/not/exist", 0);
+  printf("tst.dist.exe-install-uses-link-opts = 1\n");
+}
+#else
+#error "Platform not supported"
+#endif
+
 extern int gen12();
 
 int main() {
@@ -54,5 +81,8 @@ int main() {
          strcmp(hello(), "hello") == 0);
 
   printf("tst.dist.exe-install-uses-compile-opts = %d\n", MY_COMPILE_OPT);
+
+  // For link opts
+  call_sys();
   return 0;
 }

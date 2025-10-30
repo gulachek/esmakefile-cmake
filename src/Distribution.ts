@@ -783,6 +783,11 @@ export class Distribution {
 					const args = t.compileOpts.map((o) => quoteCmakeArg(o)).join(' ');
 					cmake.push(`target_compile_options(${t.name} PRIVATE ${args})`);
 				}
+
+				if (t.linkOpts.length > 0) {
+					const args = t.linkOpts.map((o) => quoteCmakeArg(o)).join(' ');
+					cmake.push(`target_link_options(${t.name} PRIVATE ${args})`);
+				}
 			}
 
 			cmake.push('');
