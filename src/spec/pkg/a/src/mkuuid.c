@@ -53,8 +53,7 @@ int mkuuid(char *buf, size_t bufsz) {
     dlclose(handle);
   }
 
-  char tmp[UUID_SIZE];
-  strncpy("7DC75063-2639-40F9-AF00-0B2DDCD3CB62", (const char *)tmp, bufsz - 1);
+  strncpy(buf, "7DC75063-2639-40F9-AF00-0B2DDCD3CB62", bufsz - 1);
   buf[bufsz - 1] = '\0';
   return 0;
 #else
