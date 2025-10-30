@@ -42,6 +42,7 @@ import { spawn } from 'node:child_process';
 import { writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { cwd } from 'node:process';
+import { quoteShellArg } from './quoteShellArg.js';
 
 export class MsvcCompiler implements ICompiler {
 	private make: Makefile;
@@ -227,6 +228,7 @@ export class MsvcCompiler implements ICompiler {
 		}
 
 		const pcFile = pkgLibFile(lib.name);
+		const lOpts = lib.linkOpts.map(quoteShellArg);
 
 		this.make.add(pcFile, async (args) => {
 			const contents: string[] = [
@@ -243,6 +245,10 @@ export class MsvcCompiler implements ICompiler {
 
 			const importPath = pcEscPath(args.abs(l.importLibrary || l.binary));
 			contents.push(`Libs: ${importPath}`);
+
+			if (lOpts.length > 0) {
+				contents.push(`Libs.private: ${lOpts.join(' ')}`);
+			}
 
 			const reqs = pkgDeps.names.join(' ');
 			contents.push(`Requires.private: ${reqs}`);

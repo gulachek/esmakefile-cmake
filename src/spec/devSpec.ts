@@ -1238,6 +1238,63 @@ async function updateTarget(
 			expectOutput(main.binary, ''),
 		);
 	});
+
+	await test('dev27', async () => {
+		await writePath(
+			'src/main.c',
+			'#include <stddef.h>',
+			'extern int mkuuid(char *, size_t);',
+			'int main() {',
+			' char uuid[37];',
+			' mkuuid(uuid, 37);',
+			' return 0;',
+			'}',
+		);
+
+		await cp(
+			join(gitDir, 'src/spec/pkg/a/src/mkuuid.c'),
+			make.abs(Path.src('src/mkuuid.c')),
+		);
+
+		const d = new Distribution(make, {
+			name: 'test',
+			version: '1.2.3',
+		});
+
+		const compileOpts = [];
+		const linkOpts = [];
+		switch (platform()) {
+			case 'win32':
+				linkOpts.push('Rpcrt4.lib');
+				break;
+			case 'darwin':
+				compileOpts.push('-framework', 'CoreFoundation');
+				linkOpts.push('-framework', 'CoreFoundation');
+				break;
+			case 'linux':
+				linkOpts.push('-ldl');
+				break;
+			default:
+				throw new Error('Unsupported platform for devSpec ' + platform());
+		}
+
+		const mkuuid = d.addLibrary({
+			name: 'mkuuid',
+			src: ['src/mkuuid.c'],
+			compileOpts,
+			linkOpts,
+		});
+
+		const main = d.addExecutable({
+			name: 'test',
+			src: ['src/main.c'],
+			linkTo: [mkuuid],
+		});
+
+		await report(['tst.dev.addLibrary.link-opts-transitive'], () =>
+			expectOutput(main.binary, ''),
+		);
+	});
 })();
 
 /** Defines CXXLANG macro from __cplusplus or _MSVC_LANG */

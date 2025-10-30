@@ -43,6 +43,7 @@ import { writeFile, readFile } from 'node:fs/promises';
 import { resolve } from 'node:path/posix';
 import { cwd } from 'node:process';
 import { parsePrereqs } from './makeDepfile.js';
+import { quoteShellArg } from './quoteShellArg.js';
 
 export class GccCompiler implements ICompiler {
 	private make: Makefile;
@@ -253,6 +254,7 @@ export class GccCompiler implements ICompiler {
 
 		// TODO - Distribution-specific pkgconfig dir?
 		const pcFile = pkgLibFile(lib.name);
+		const lOpts = lib.linkOpts.map(quoteShellArg);
 
 		this.make.add(pcFile, async (args) => {
 			const contents: string[] = [
@@ -266,6 +268,10 @@ export class GccCompiler implements ICompiler {
 
 			const libs = `-L${args.abs(lib.outDir)} -l${lib.name}`;
 			contents.push(`Libs: ${libs}`);
+
+			if (lOpts.length > 0) {
+				contents.push(`Libs.private: ${lOpts.join(' ')}`);
+			}
 
 			const reqs = pkgDeps.names.join(' ');
 			contents.push(`Requires.private: ${reqs}`);

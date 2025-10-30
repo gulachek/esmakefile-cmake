@@ -70,6 +70,9 @@ plan:
             prose: >-
               A library is by linked as a dynamic library when `esmakefile-cmake.config.json` has `buildSharedLibs: true`
               and the library has type `default`.
+          - case: link-opts-transitive
+            prose: >-
+              A library with linkOpts can be linked to other executables without needing to specify the same linkOpts.
       - group: findPackage
         plan:
           - case: searches-pkgconfig-by-name
