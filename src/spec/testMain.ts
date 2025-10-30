@@ -291,6 +291,20 @@ cli((make) => {
 		args.logStream.write(stdout);
 	});
 
+	devTargets.push('quote-shell-arg-spec');
+	make.add('quote-shell-arg-spec', ['reset'], async (args) => {
+		const stdout = await spawnAsync(nodeExe, [
+			mochaJs,
+			'dist/spec/quoteShellArgSpec.js',
+		]);
+
+		allResults.push({
+			id: 'tst.dist.quotes-shell-args',
+			passed: true,
+		});
+		args.logStream.write(stdout);
+	});
+
 	make.add('dev', devTargets, () => {});
 
 	make.add(esmakefileCmakeConfig, ['reset'], (args) => {

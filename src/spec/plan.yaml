@@ -148,6 +148,8 @@ plan:
             prose: A version given to `findPackage` can specify a CMake version.
       - case: quotes-cmake-args
         prose: Arguments passed to CMake functions are properly quoted.
+      - case: quotes-shell-args
+        prose: Shell arguments included in `Libs.private` are quoted.
       - case: exe-install-uses-compile-opts
         prose: >-
           An executable with `compileOpts` will use those options via `target_compile_options`
