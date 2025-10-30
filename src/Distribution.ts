@@ -785,7 +785,7 @@ export class Distribution {
 				);
 			}
 
-			// Add compile options
+			// Add compile/link options
 			for (const t of targets) {
 				if (t.compileOpts.length > 0) {
 					const args = t.compileOpts.map((o) => quoteCmakeArg(o)).join(' ');
@@ -794,7 +794,7 @@ export class Distribution {
 
 				if (t.linkOpts.length > 0) {
 					const args = t.linkOpts.map((o) => quoteCmakeArg(o)).join(' ');
-					cmake.push(`target_link_options(${t.name} PRIVATE ${args})`);
+					cmake.push(`target_link_options(${t.name} PUBLIC ${args})`);
 				}
 			}
 
