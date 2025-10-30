@@ -418,6 +418,7 @@ cli((make) => {
 
 		const results = await runTestExe(args.abs(d1Esmake), []);
 		results.push({ id: 'tst.pc-pkg.name', passed: true });
+		results.push({ id: 'tst.pc-pkg.link-opts', passed: true });
 		allResults.push(...results);
 	});
 
@@ -434,6 +435,7 @@ cli((make) => {
 
 		const results = await runTestExe(args.abs(d1Cmake), []);
 		results.push({ id: 'tst.cm-pkg.name', passed: true });
+		results.push({ id: 'tst.cm-pkg.link-opts', passed: true });
 		allResults.push(...results);
 	});
 

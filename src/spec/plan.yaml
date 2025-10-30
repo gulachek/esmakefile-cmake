@@ -160,7 +160,11 @@ plan:
     plan:
       - case: name
         prose: A library installs a CMake config file that links to the library with the same name as the library.
+      - case: link-opts
+        prose: An installed library with linkOpts will be linkable to downstream builds.
   - group: pc-pkg
     plan:
       - case: name
         prose: A library created with `addLibrary` installs a `.pc` file that is linked with the same name as the library.
+      - case: link-opts
+        prose: An installed library with linkOpts will be linkable to downstream builds.

@@ -8,10 +8,11 @@ cli((make) => {
 	});
 
 	const a = d.findPackage('a');
+	const mkuuid = d.findPackage('mkuuid');
 
 	d.addExecutable({
 		name: 'd1',
 		src: ['src/d1.c'],
-		linkTo: [a],
+		linkTo: [a, mkuuid],
 	});
 });
