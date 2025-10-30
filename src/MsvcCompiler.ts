@@ -42,6 +42,7 @@ import { spawn } from 'node:child_process';
 import { writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { cwd } from 'node:process';
+import { quoteShellArg } from './quoteShellArg.js';
 
 export class MsvcCompiler implements ICompiler {
 	private make: Makefile;
@@ -67,6 +68,7 @@ export class MsvcCompiler implements ICompiler {
 
 	private _compile(c: ILinkedCompilation, pkgDeps: IPkgDeps): IBuildPath[] {
 		const compileCommands = c.compileCommands;
+		const copts = c.compileOpts;
 
 		this.make.add(compileCommands, pkgDeps.prereqs, async (args) => {
 			const index: CompileCommandIndex = new Map<string, ICompileCommand>();
@@ -83,7 +85,7 @@ export class MsvcCompiler implements ICompiler {
 			const { flags: pkgCflags } = await this._pkg.cflags(pkgDeps.names);
 
 			for (const s of c.src) {
-				const flags = ['/nologo', '/c'];
+				const flags = ['/nologo', '/c', '/MDd'];
 				let cflags: string[];
 				if (isCxxSrc(s)) {
 					cflags = this._cxxflags;
@@ -104,6 +106,7 @@ export class MsvcCompiler implements ICompiler {
 						cc,
 						...flags,
 						...includeFlags,
+						...copts,
 						...cflags,
 						...pkgCflags,
 						args.abs(s),
@@ -157,6 +160,7 @@ export class MsvcCompiler implements ICompiler {
 
 		const targets: IBuildPath[] = [path];
 		const flags: string[] = ['/nologo'];
+		const linkOpts = c.linkOpts;
 
 		if (importPath) {
 			targets.push(importPath);
@@ -173,11 +177,14 @@ export class MsvcCompiler implements ICompiler {
 					static: true,
 				});
 
+				const link = linkOpts.length > 0 ? ['/link', ...linkOpts] : [];
+
 				return args.spawn(this.cc, [
 					...flags,
 					`/Fe${args.abs(path)}`,
 					...objsAbs,
 					...pkgLibs,
+					...link,
 				]);
 			},
 		);
@@ -221,6 +228,7 @@ export class MsvcCompiler implements ICompiler {
 		}
 
 		const pcFile = pkgLibFile(lib.name);
+		const lOpts = lib.linkOpts.map(quoteShellArg);
 
 		this.make.add(pcFile, async (args) => {
 			const contents: string[] = [
@@ -237,6 +245,10 @@ export class MsvcCompiler implements ICompiler {
 
 			const importPath = pcEscPath(args.abs(l.importLibrary || l.binary));
 			contents.push(`Libs: ${importPath}`);
+
+			if (lOpts.length > 0) {
+				contents.push(`Libs.private: ${lOpts.join(' ')}`);
+			}
 
 			const reqs = pkgDeps.names.join(' ');
 			contents.push(`Requires.private: ${reqs}`);

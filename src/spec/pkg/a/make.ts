@@ -20,6 +20,7 @@
 import { Distribution } from '../../../index.js';
 import { cli, Path } from 'esmakefile';
 import { writeFile } from 'node:fs/promises';
+import { platform } from 'node:os';
 
 cli((make) => {
 	const d = new Distribution(make, {
@@ -57,10 +58,32 @@ cli((make) => {
 		return writeFile(args.abs(genC), 'int gen12() { return 12; }');
 	});
 
+	const e1cOpts: string[] = [];
+	const e1lOpts: string[] = [];
+
+	switch (platform()) {
+		case 'win32':
+			e1cOpts.push('/D', 'MY_COMPILE_OPT=1');
+			e1lOpts.push('Rpcrt4.lib');
+			break;
+		case 'darwin':
+			e1cOpts.push('-DMY_COMPILE_OPT=1', '-framework', 'CoreFoundation');
+			e1lOpts.push('-framework', 'CoreFoundation');
+			break;
+		case 'linux':
+			e1cOpts.push('-DMY_COMPILE_OPT=1');
+			e1lOpts.push('-ldl');
+			break;
+		default:
+			throw new Error('platform not supported');
+	}
+
 	d.addExecutable({
 		name: 'e1',
 		src: ['src/e1.c', genC],
 		linkTo: [zero, one, two, hello],
+		compileOpts: e1cOpts,
+		linkOpts: e1lOpts,
 	});
 
 	d.addTest({
@@ -71,5 +94,30 @@ cli((make) => {
 	d.addLibrary({
 		name: 'a',
 		src: ['src/a.c'],
+	});
+
+	const linkOpts: string[] = [];
+	const compileOpts: string[] = [];
+
+	switch (platform()) {
+		case 'win32':
+			linkOpts.push('Rpcrt4.lib');
+			break;
+		case 'darwin':
+			compileOpts.push('-framework', 'CoreFoundation');
+			linkOpts.push('-framework', 'CoreFoundation');
+			break;
+		case 'linux':
+			linkOpts.push('-ldl');
+			break;
+		default:
+			throw new Error('Unsupported platform!');
+	}
+
+	d.addLibrary({
+		name: 'mkuuid',
+		src: ['src/mkuuid.c'],
+		compileOpts,
+		linkOpts,
 	});
 });

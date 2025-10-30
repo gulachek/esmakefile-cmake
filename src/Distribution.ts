@@ -35,6 +35,8 @@ import { chdir, cwd } from 'node:process';
 import { platform } from 'node:os';
 import { PkgConfig } from 'espkg-config';
 import { dirname, resolve } from 'node:path';
+import { quoteCmakeArg } from './quoteCmakeArg.js';
+import { quoteShellArg } from './quoteShellArg.js';
 
 /**
  * Options to create a Distribution
@@ -68,6 +70,12 @@ export interface IAddExecutableOpts {
 
 	/** Libraries to link to */
 	linkTo?: (Library | IFindPackageResult)[];
+
+	/** Generic compiler flags */
+	compileOpts?: string[];
+
+	/** Generic linker flags */
+	linkOpts?: string[];
 }
 
 /**
@@ -263,6 +271,9 @@ export class Distribution {
 			}
 		}
 
+		const compileOpts = opts.compileOpts || [];
+		const linkOpts = opts.linkOpts || [];
+
 		return {
 			name: opts.name,
 			outDir: this.outDir,
@@ -271,6 +282,8 @@ export class Distribution {
 			privateIncludeDirs,
 			linkTo,
 			pkgs,
+			compileOpts,
+			linkOpts,
 			compileCommands: this.outDir.join(`.${opts.name}-compile_commands.json`),
 			devOnly: false,
 			distName: this.name,
@@ -687,6 +700,13 @@ export class Distribution {
 					`Libs: "\${libdir}\\\\${lib.name}.lib"`,
 				];
 
+				if (lib.linkOpts.length > 0) {
+					const flags = lib.linkOpts.map(quoteShellArg).join(' ');
+					const libsPrivate = `Libs.private: ${flags}`;
+					pc.push(libsPrivate);
+					msvcPc.push(libsPrivate);
+				}
+
 				if (pcReqs.length > 0) {
 					const req = `Requires.private: ${pcReqs.join(' ')}`;
 					pc.push(req);
@@ -763,6 +783,19 @@ export class Distribution {
 					`DESTINATION "\${${configDirVar}}"`,
 					')',
 				);
+			}
+
+			// Add compile/link options
+			for (const t of targets) {
+				if (t.compileOpts.length > 0) {
+					const args = t.compileOpts.map((o) => quoteCmakeArg(o)).join(' ');
+					cmake.push(`target_compile_options(${t.name} PRIVATE ${args})`);
+				}
+
+				if (t.linkOpts.length > 0) {
+					const args = t.linkOpts.map((o) => quoteCmakeArg(o)).join(' ');
+					cmake.push(`target_link_options(${t.name} PUBLIC ${args})`);
+				}
 			}
 
 			cmake.push('');

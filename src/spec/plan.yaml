@@ -1,4 +1,4 @@
-group: e2e
+group: tst
 plan:
   - group: dev
     plan:
@@ -40,6 +40,10 @@ plan:
             prose: The symbols from a transitive library in a `Distribution` are linked to an executable.
           - case: can-link-to-other-distribution
             prose: A library created with one `Distribution` can be linked to an executable in another `Distribution`.
+          - case: compile-opts
+            prose: An executable target can have explicit generic compiler flags.
+          - case: link-opts
+            prose: An executable target can have explicit generic linker flags.
       - group: addLibrary
         plan:
           - case: default-include
@@ -66,6 +70,9 @@ plan:
             prose: >-
               A library is by linked as a dynamic library when `esmakefile-cmake.config.json` has `buildSharedLibs: true`
               and the library has type `default`.
+          - case: link-opts-transitive
+            prose: >-
+              A library with linkOpts can be linked to other executables without needing to specify the same linkOpts.
       - group: findPackage
         plan:
           - case: searches-pkgconfig-by-name
@@ -142,11 +149,27 @@ plan:
         plan:
           - case: can-specify-version
             prose: A version given to `findPackage` can specify a CMake version.
+      - case: quotes-cmake-args
+        prose: Arguments passed to CMake functions are properly quoted.
+      - case: quotes-shell-args
+        prose: Shell arguments included in `Libs.private` are quoted.
+      - case: exe-install-uses-compile-opts
+        prose: >-
+          An executable with `compileOpts` will use those options via `target_compile_options`
+          in the CMake distribution.
+      - case: exe-install-uses-link-opts
+        prose: >-
+          An executable with `linkOpts` will use those options via `target_link_options`
+          in the CMake distribution.
   - group: cm-pkg
     plan:
       - case: name
         prose: A library installs a CMake config file that links to the library with the same name as the library.
+      - case: link-opts
+        prose: An installed library with linkOpts will be linkable to downstream builds.
   - group: pc-pkg
     plan:
       - case: name
         prose: A library created with `addLibrary` installs a `.pc` file that is linked with the same name as the library.
+      - case: link-opts
+        prose: An installed library with linkOpts will be linkable to downstream builds.

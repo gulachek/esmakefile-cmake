@@ -4,7 +4,7 @@ Due to the complex integrated nature of this project, automated
 testing is somewhat challenging to accomplish via normal unit
 tests alone. Instead, integration tests are heavily relied on.
 
-The entry point for testing can be found in `src/spec/e2e.ts`
+The entry point for testing can be found in `src/spec/testMain.ts`
 and should be the source of truth for _how_ tests are run.
 
 The inteded test cases should all be documented in
