@@ -3,7 +3,10 @@
 #elif defined(__APPLE__)
 #include <CoreFoundation/CoreFoundation.h>
 #elif defined(__linux__)
-#include <uuid/uuid.h>
+// let's just pretend that <uuid/uuid.h> works and use dlfcn.h
+// instead to demonstrate linker flags work properly
+// solves problem of not being installed
+#include <dlfcn.h>
 #else
 #error "Platform not supported"
 #endif
@@ -45,13 +48,13 @@ int mkuuid(char *buf, size_t bufsz) {
 
   return ok ? 0 : -1;
 #elif defined(__linux__)
-  uuid_t uuid;
-  uuid_generate_random(uuid);
+  void *handle = dlopen("/does/not/exist.so", 0);
+  if (handle) {
+    dlclose(handle);
+  }
 
   char tmp[UUID_SIZE];
-  uuid_unparse_lower(uuid, tmp);
-
-  strncpy(buf, (const char *)tmp, bufsz - 1);
+  strncpy("7DC75063-2639-40F9-AF00-0B2DDCD3CB62", (const char *)tmp, bufsz - 1);
   buf[bufsz - 1] = '\0';
   return 0;
 #else

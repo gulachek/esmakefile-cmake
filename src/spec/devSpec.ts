@@ -1221,8 +1221,7 @@ async function updateTarget(
 				linkOpts.push('-framework', 'CoreFoundation');
 				break;
 			case 'linux':
-				//compileOpts.push('-I/usr/include/linux');
-				linkOpts.push('-luuid');
+				linkOpts.push('-ldl');
 				break;
 			default:
 				throw new Error('Unsupported platform for devSpec ' + platform());

@@ -108,7 +108,7 @@ cli((make) => {
 			linkOpts.push('-framework', 'CoreFoundation');
 			break;
 		case 'linux':
-			linkOpts.push('-luuid');
+			linkOpts.push('-ldl');
 			break;
 		default:
 			throw new Error('Unsupported platform!');
